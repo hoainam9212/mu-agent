@@ -326,7 +326,7 @@ Còn mở:
 |---|---|---|
 | `server/` – canh trận (football-data.org / API-Football / nhập tay), luật hang, vào/ra, sáng/tắt đèn, rủ anh em, vỗ vai, câu AI + bộ lọc + kho dự phòng, replay, telemetry, admin | Xong bản đầu | 71 test pytest qua, chạy thử bằng uvicorn |
 | `android/core/` – luật thức/ngủ, giờ báo sáng, dòng "còn kịp ngủ", nhắc trận đêm, đọc tin FCM, lời thông báo | Xong bản đầu | 24 test JUnit qua |
-| `android/app/` – đăng ký, hội anh em, màn hang (FLAG_SECURE), ăn mừng, nhận FCM, báo sáng (WorkManager), đo tắt máy | Đã viết, **chưa build** | Môi trường cloud chặn tải Android SDK (`dl.google.com`) |
+| `android/app/` – đăng ký, hội anh em, màn hang (FLAG_SECURE), ăn mừng, nhận FCM, báo sáng (WorkManager), đo tắt máy | Build được trên GitHub Actions (APK debug ở mục Artifacts) | Chưa chạy thử trên máy thật; chưa có Firebase nên chưa nhận thông báo |
 | Firebase project, `google-services.json`, khoá dịch vụ FCM cho máy chủ | Chưa làm | Cần người có tài khoản Google tạo |
 | Token football-data.org / key API-Football | Chưa có | Đăng ký miễn phí, thử `/v1/admin/schedule/refresh` |
 | Triển khai máy chủ (Cloud Run hoặc VPS) | Chưa làm | |

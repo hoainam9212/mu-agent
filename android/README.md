@@ -17,8 +17,8 @@ cd android
 Cần Android SDK (compileSdk 35) và JDK 17+. Muốn nhận thông báo đẩy: tạo Firebase project, tải
 `google-services.json` vào `app/` (file này không commit). Thiếu file này app vẫn mở được nhưng không nhận FCM.
 
-**Lưu ý:** `app/` chưa từng được build – môi trường cloud nơi viết code chặn `dl.google.com` (Android SDK, Google Maven).
-Lần build đầu trên máy có SDK có thể còn lỗi biên dịch nhỏ cần sửa.
+Không có Android SDK thì để GitHub Actions build: mỗi lần push, workflow `CI` chạy test `core` và build APK debug,
+tải về ở trang của lần chạy, mục Artifacts → `vaohang-debug-apk`.
 
 Mặc định `vaohang.serverUrl=http://10.0.2.2:8000` (máy chủ chạy trên máy tính, app chạy trên emulator).
 Chỉ địa chỉ này và `localhost` được dùng HTTP thường; pilot phải dùng HTTPS.
