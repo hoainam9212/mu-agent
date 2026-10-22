@@ -24,6 +24,13 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: pytest -q
 
+  docker:
+    name: Máy chủ (Docker image)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t vaohang-server server
+
   android:
     name: Android (test core + build APK)
     runs-on: ubuntu-latest
