@@ -291,9 +291,22 @@ Từ 1/11 chỉ sửa lỗi.
 - **Hang chỉ đóng khi MU thắng**; 30 phút sau còi chỉ là **tắt đèn**, không đóng hang (§3.3).
 - **Vào hang và ra hang là quyết định của người dùng**; MU thắng thì tự động đưa ra, và **chỉ người đang trong hang**
   nhận "Ra khỏi hang" (§3.3).
+- **Màn hang chỉ hiện người đang trong hang**; không hiện người ở ngoài/đang ngủ (bỏ avatar "N" mờ trong mockup).
 
 Còn mở:
 
-- **Q2.** Mockup có avatar "N" mờ (người đang ngủ), trong khi luật nói "không điểm danh ai vắng".
-  Đề xuất: **chỉ hiện người đang trong hang**, không hiện người ở ngoài.
-- **Q5.** Ngân sách: gói API-Football trả phí + Claude API (chỉ vài lượt gọi mỗi trận) + Firebase (gói miễn phí đủ cho pilot).
+- **Q5. Ngân sách.** Các khoản dự kiến cho pilot:
+
+  | Khoản | Ghi chú |
+  |---|---|
+  | API-Football gói trả phí | Khoản tiền mặt duy nhất chắc chắn phải trả; Pro ~19 USD/tháng theo các trang so sánh – xác nhận trên trang giá chính thức |
+  | Claude API | Chỉ vài lượt gọi mỗi trận (sinh câu + chấm), không theo từng người → chi phí rất nhỏ |
+  | Firebase (FCM, Anonymous Auth) | FCM miễn phí; gói miễn phí đủ cho 20 người |
+  | Máy chủ (Cloud Run hoặc VPS nhỏ) | Lưu lượng pilot rất thấp, có thể nằm trong hạn mức miễn phí của Cloud Run |
+
+  **Credit "Trial credit for GenAI App Builder" (¥159.885, hết hạn 11/4/2027):** theo các thảo luận cộng đồng và
+  một phản hồi của bộ phận hỗ trợ Google được trích lại, credit này chỉ áp dụng cho nhóm Vertex AI Search /
+  Agent Builder, **không** áp dụng cho Gemini API, Claude trên Vertex, Cloud Run hay API-Football. Kiến trúc hiện tại
+  không dùng dịch vụ nào trong nhóm đó, nên nhiều khả năng credit này **không giúp được**. Cần xác nhận trong
+  Cloud Console → Billing → Credits → bấm vào credit để xem danh sách dịch vụ/SKU áp dụng. Không nên đổi kiến trúc
+  chỉ để tiêu credit.
