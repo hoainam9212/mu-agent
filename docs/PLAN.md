@@ -9,8 +9,17 @@
 
 ## 0. Tóm tắt
 
-Vòng lặp sản phẩm: **MU thua → hang tự mở → rủ anh em đang thức → vỗ vai bằng câu soạn sẵn →
-hang tự tắt đèn sau 30 phút → MU thắng trận sau → cả hội ra khỏi hang.**
+Vòng lặp sản phẩm: **MU thua → hang mở → ai muốn thì vào (không bắt buộc) → vỗ vai bằng câu soạn sẵn →
+tắt đèn sau 30 phút, nhưng hang vẫn mở → ai muốn ra lúc nào cũng được → MU thắng thì hang đóng, ai còn trong hang
+được đưa ra cùng lúc.**
+
+Ba khái niệm tách biệt (chốt 22/10, khác proposal gốc ở chỗ hang không tự đóng sau 30 phút):
+
+| Khái niệm | Ai quyết | Khi nào |
+|---|---|---|
+| **Hang mở / đóng** | Kết quả trận | Mở khi MU thua; giữ nguyên khi hoà; **chỉ đóng khi MU thắng** |
+| **Ở trong / ngoài hang** | **Người dùng** | Vào khi muốn (lúc hang mở); ra lúc nào cũng được; MU thắng thì tự động ra |
+| **Sáng đèn / tắt đèn** | Agent | Sáng đèn 30 phút sau mỗi trận không thắng khi hang mở; ngoài lúc đó hang im lặng |
 
 | Thành phần | Công nghệ | Phụ trách |
 |---|---|---|
@@ -34,13 +43,17 @@ Mốc chính:
 **Làm**
 
 1. Tạo/tham gia **hội anh em** bằng mã mời; hai bên cùng đồng ý mới vào chung một hang.
-2. Máy chủ **canh trận MU** trực tiếp; còi mãn cuộc mà MU thua (hoặc hoà ngay sau một trận thua) thì **tự mở hang** cho từng hội.
+2. Máy chủ **canh trận MU** trực tiếp; còi mãn cuộc mà MU thua thì **mở hang** cho từng hội; hoà thì hang giữ nguyên;
+   chỉ khi MU thắng hang mới đóng.
 3. **Chỉ gọi người đang thức**; người đã ngủ hoặc đang bận thì sáng mới báo nhẹ.
-4. Thông báo "Hang đã mở. Tuấn, Hùng và Long cũng đang thức" + nút **Rủ anh em vào hang** / **Thôi, ngủ luôn**.
-5. Màn hang: avatar người trong hang, các cái vỗ vai nhận được, nút **Vỗ vai lại** (chọn 1 trong 3–4 câu soạn sẵn).
+4. Sau mỗi trận không thắng khi hang mở: người ở ngoài nhận "Hang đang mở. Tuấn, Hùng đang trong hang" +
+   nút **Vào hang** / **Thôi, ngủ luôn**; vào hay không là **tự chọn**. Người trong hang có nút **Rủ anh em vào hang**.
+5. Màn hang: avatar người trong hang, các cái vỗ vai nhận được, nút **Vỗ vai lại** (chọn 1 trong 3–4 câu soạn sẵn),
+   nút **Ra khỏi hang** (lúc nào cũng có, ra lặng lẽ, không báo ai).
 6. **AI soạn câu vỗ vai** theo tỷ số, đối thủ, chuỗi trận; tự trào về MU, có góc nhìn mới, không chê ai.
-7. **Tắt đèn**: hang tự đóng sau 30 phút; màn hình "Báo thức của bạn: 6:30, còn kịp ngủ 2 tiếng".
-8. **Ra khỏi hang**: trận MU thắng kế tiếp thì gọi cả hội ra cùng lúc.
+7. **Tắt đèn**: 30 phút sau còi, hang im lặng (không vỗ vai, không thông báo) nhưng **vẫn mở**;
+   màn hình "Báo thức của bạn: 6:30, còn kịp ngủ 2 tiếng". Trận không thắng tiếp theo thì hang sáng đèn lại.
+8. **Ra khỏi hang**: MU thắng thì hang đóng, **chỉ những ai đang trong hang** được đưa ra cùng lúc kèm màn ăn mừng.
 9. Nhắc "Đêm nay có trận" trước các trận đêm.
 10. Telemetry ẩn danh để đo 3 chỉ số; khảo sát ngắn.
 11. Chế độ demo/diễn tập: replay trận Atlético với hệ số thời gian.
@@ -60,17 +73,17 @@ Mốc chính:
 ┌─────────────── Máy chủ (FastAPI + Postgres) ────────────────┐
 │ FixtureScheduler: lịch trận MU, nhắc trước trận đêm         │
 │ MatchPoller: API-Football ~15s trong cửa sổ trận            │
-│   └► MatchStateMachine → FT & MU thua → CaveService.open()  │
-│                         → FT & MU thắng → CaveService.exit()│
+│   └► MatchStateMachine → FT & MU thua/hoà → CaveService.light()│
+│                         → FT & MU thắng → CaveService.close()│
 │ PatService: gọi Claude 1 lần/trận → lọc → kho dự phòng      │
-│ CaveService: phiên hang theo hội, đóng sau 30', ra hang     │
+│ CaveService: hang theo hội, vào/ra, sáng đèn 30', đóng khi thắng│
 │ Groups API, Presence API, Telemetry API, Replay API         │
 └──────────────┬───────────────────────────────▲──────────────┘
                │ FCM data message (ưu tiên cao) │ HTTPS
 ┌──────────────▼───────────────────────────────┴──────────────┐
 │ App Android                                                  │
 │  PresenceProbe: màn hình bật? DND? báo thức? điểm danh trận? │
-│  Thông báo "Hang đã mở" · Màn hang (FLAG_SECURE)             │
+│  Thông báo "Hang đang mở" · Vào/Ra hang · Màn hang (FLAG_SECURE)│
 │  Vỗ vai / Vỗ vai lại · Tắt đèn · Ra khỏi hang                 │
 │  Hội anh em (mã mời/QR) · Cài đặt · Telemetry                 │
 └──────────────────────────────────────────────────────────────┘
@@ -97,16 +110,23 @@ mu-agent/
   (Pro 7.500 request/ngày theo hướng dẫn của API-Football; xác nhận giá trên dashboard).
 - `MatchStateMachine`: `SCHEDULED → LIVE → FINISHED`. Coi là hết trận khi status ∈ {FT, AET, PEN}.
   Chống xử lý trùng theo `fixture_id`; nếu API trễ quá 10 phút sau giờ dự kiến hết trận thì cảnh báo người trực.
-- Kết quả:
-  - **Thua → mở hang.**
-  - **Hoà mà trận trước thua → vẫn mở hang** ("vẫn chưa ra được hang"). Hoà mà trận trước không thua → không làm gì.
-    "Trận trước" = trận chính thức liền trước của MU ở **mọi giải** (lấy từ `/fixtures?team=33&last=2`, bỏ giao hữu).
-  - **Thắng → ra khỏi hang** (cho các hội có hang mở trong 14 ngày qua).
+- Kết quả trận chính thức (mọi giải, bỏ giao hữu) cập nhật trạng thái hang:
+  - **Thua → hang mở** (nếu đang mở thì vẫn mở) và **sáng đèn**.
+  - **Hoà → hang giữ nguyên.** Đang mở thì sáng đèn lại ("vẫn chưa ra được hang"); đang đóng thì không làm gì.
+    Nhờ vậy thua → hoà → hoà thì hang vẫn mở suốt.
+  - **Thắng → hang đóng**, ai đang trong hang được đưa ra.
   - Thắng/thua trên chấm luân lưu (status PEN) tính theo kết quả luân lưu.
 
   ```python
-  def should_open_cave(result: str, prev_result: str | None) -> bool:
-      return result == "L" or (result == "D" and prev_result == "L")
+  def next_cave_open(is_open: bool, result: str) -> bool:
+      if result == "W":
+          return False      # đóng hang, mọi người trong hang ra
+      if result == "L":
+          return True
+      return is_open        # hoà: giữ nguyên
+
+  def lights_on(is_open_after: bool, result: str) -> bool:
+      return is_open_after and result != "W"   # sáng đèn 30' sau trận
   ```
 - **Admin endpoint** để người trực bắn sự kiện tay nếu API-Football lỗi trong đêm pilot.
 - **Replay:** ghi sự kiện trận Atlético 2-0 MU (14/10) thành JSON; `POST /v1/replay {fixture, speed}` phát lại
@@ -130,21 +150,36 @@ còn lại  → asleep (thà không gọi còn hơn đánh thức)
 ```
 
 - Người `asleep`/`busy`: **không rung, không kêu**. Gửi một thông báo im lặng vào sáng
-  (giờ báo thức kế tiếp, mặc định 07:00): "Đêm qua MU thua 0-2. Anh em đã vào hang, có 2 cái vỗ vai cho bạn."
+  (giờ báo thức kế tiếp, mặc định 07:00): "Đêm qua MU thua 0-2. Hang đang mở, Tuấn và Hùng đang trong hang."
+  (người đã ở trong hang: "…có 2 cái vỗ vai cho bạn."). Vào hay không vẫn là người dùng tự chọn.
 - Danh sách "cũng đang thức" chỉ hiện người `awake` trong **cùng hội**.
 - Kiểm tra trên ≥ 3 dòng máy (Pixel, Samsung, Xiaomi) vì FCM im lặng có thể bị trễ khi máy ở chế độ Doze;
   dùng FCM ưu tiên cao, và khi người dùng mở app thì app tự kéo trạng thái hang.
 
-### 3.3 Phiên hang (SRV + AND-1)
+### 3.3 Hang, vào/ra, sáng/tắt đèn (SRV + AND-1)
 
-- `CaveSession {group_id, fixture_id, opened_at, closes_at, members[]}`; mở cho **mỗi hội có ≥ 1 người awake**.
-- Thông báo "Hang đã mở…" chỉ tới người awake. **Rủ anh em vào hang** → gửi lời mời tới người awake còn lại
-  trong hội. **Thôi, ngủ luôn** → ghi `asleep`, không gửi gì thêm.
-- **Đóng hang:** `closes_at = opened_at + 30'`. Màn tắt đèn tính riêng cho từng người theo báo thức của họ
-  (`AlarmManager.getNextAlarmClock()`): "Báo thức của bạn: 6:30. Còn kịp ngủ 2 tiếng." Không có báo thức
-  thì bỏ dòng này. Sau khi đóng: không gửi thêm thông báo nào trong đêm.
-- **Ra khỏi hang:** khi MU thắng, gửi "RA KHỎI HANG!" tới **mọi thành viên** của các hội đó cùng lúc
-  (trừ giờ ngủ/giờ làm theo luật §3.2 → dời tới sáng), nút "Ra hang ăn mừng" mở màn ăn mừng.
+Mô hình dữ liệu:
+
+```
+Cave        {group_id, status: OPEN|CLOSED, opened_by_fixture, closed_by_fixture}
+Membership  {cave_id, user_id, entered_at, left_at, left_reason: self|win}
+LightWindow {cave_id, fixture_id, starts_at (= FT), ends_at (= FT + 30')}
+```
+
+- **Vào hang – tự chọn.** Khi hang sáng đèn, người **ở ngoài** và đang thức nhận thông báo
+  "MU thua 0-2. Hang đang mở. Tuấn, Hùng đang trong hang." + **Vào hang** / **Thôi, ngủ luôn**.
+  Bỏ qua thông báo = không vào; không nhắc lại trong đêm đó. Khi hang mở, trong app lúc nào cũng có nút **Vào hang**
+  (kể cả ngoài giờ sáng đèn).
+- Người **ở trong** và đang thức nhận "Hang sáng đèn" khi trận không thắng kết thúc; có nút
+  **Rủ anh em vào hang** → mời những người ở ngoài, đang thức trong hội (mỗi người tối đa 1 lời mời mỗi trận).
+- **Ra hang – tự chọn.** Nút **Ra khỏi hang** lúc nào cũng có; ra lặng lẽ, không báo ai, không ai thấy ai đã ra
+  (đúng luật "không điểm danh"). Ra rồi muốn vào lại vẫn được khi hang còn mở.
+- **Tắt đèn:** hết `LightWindow` (30 phút sau còi) thì hang im lặng: không vỗ vai, không thông báo,
+  màn hang chỉ còn chế độ xem. Màn tắt đèn tính theo báo thức từng người (`AlarmManager.getNextAlarmClock()`):
+  "Báo thức của bạn: 6:30. Còn kịp ngủ 2 tiếng." Không có báo thức thì bỏ dòng này.
+- **Đóng hang khi MU thắng:** đóng `Cave`, mọi `Membership` còn mở được ghi `left_reason = win`, gửi
+  "RA KHỎI HANG!" + nút "Ra hang ăn mừng" **chỉ tới người đang trong hang** (người ngủ/đang làm → dời tới sáng).
+  Người ở ngoài hang không nhận gì.
 - Màn hang bật `FLAG_SECURE` (chặn chụp màn hình), không có nút chia sẻ.
 
 ### 3.4 Câu vỗ vai do AI soạn (AI)
@@ -161,7 +196,8 @@ còn lại  → asleep (thà không gọi còn hơn đánh thức)
    - Không chê/đổ lỗi (từ điển + một lượt Claude chấm "câu này có chê ai không?").
    - Số liệu trong câu phải khớp dữ kiện đầu vào.
 4. Chọn 8 câu tốt nhất; **thiếu thì bù từ kho dự phòng** (~40 câu CONTENT viết sẵn, có nhãn theo kịch bản:
-   thua 1 bàn, thua đậm, thua phút cuối, chuỗi thua, **hoà sau trận thua** – "vẫn chưa ra được hang"…). API lỗi → dùng 100% kho dự phòng.
+   thua 1 bàn, thua đậm, thua phút cuối, chuỗi thua, **hoà khi hang đang mở** – "vẫn chưa ra được hang",
+   ở trong hang nhiều ngày…). API lỗi → dùng 100% kho dự phòng.
 5. Để kịp lúc 4h sáng: **sinh trước** bộ câu cho các kịch bản khả dĩ ngay khi hết hiệp 1 và phút 80,
    lúc hết trận chỉ cần chọn đúng bộ và chèn tỷ số.
 
@@ -182,14 +218,17 @@ còn lại  → asleep (thà không gọi còn hơn đánh thức)
 
 ### 3.7 Đo (CONTENT + SRV)
 
-Sự kiện telemetry (ID ẩn danh): `cave_opened, invite_sent, cave_joined, pat_sent, pat_received,
-lights_out_shown, screen_off_after_ft, exit_cave_opened, survey_answer`.
+Sự kiện telemetry (ID ẩn danh): `cave_opened, cave_closed, lights_on, invite_shown, invite_sent,
+cave_enter{source: notification|invite|app}, cave_leave{reason: self|win}, pat_sent, pat_received,
+lights_out_shown, screen_off_after_ft, exit_celebration_opened, survey_answer`.
 
-| Chỉ số (proposal) | Cách đo |
+| Chỉ số | Cách đo |
 |---|---|
-| % lần hang mở có ≥ 1 cái vỗ vai | `CaveSession` có ≥ 1 `pat_sent` / tổng hang mở |
-| % tắt máy trong 30 phút sau còi | Trong lúc hang mở, app chạy dịch vụ nền ngắn (có thông báo "Hang đang mở") nghe sự kiện màn hình tắt; tính "tắt máy" = màn hình tắt trước FT + 30' và **không bật lại ≥ 20 phút** |
-| "Đỡ cay một mình" sau 1 tháng | Khảo sát 3 câu (thang 1–5) sau đêm pilot và sau 1 tháng |
+| % lần sáng đèn có ≥ 1 cái vỗ vai (proposal) | `LightWindow` có ≥ 1 `pat_sent` / số `LightWindow` có ≥ 2 người trong hang |
+| % tắt máy trong 30 phút sau còi (proposal) | Trong giờ sáng đèn, app chạy dịch vụ nền ngắn (có thông báo "Hang đang sáng đèn") nghe sự kiện màn hình tắt; tính "tắt máy" = màn hình tắt trước FT + 30' và **không bật lại ≥ 20 phút** |
+| "Đỡ cay một mình" sau 1 tháng (proposal) | Khảo sát 3 câu (thang 1–5) sau đêm pilot và sau 1 tháng |
+| % người được mời chọn vào hang (thêm) | `cave_enter` / `invite_shown` – cho biết "vào hang" có hấp dẫn không khi đã là tự chọn |
+| Ra hang tự nguyện vs. được đưa ra khi thắng (thêm) | Tỷ lệ `cave_leave{self}` / `{win}`, thời gian ở trong hang |
 
 Lưu ý: chỉ số 2 không có nhóm đối chứng → khảo sát thêm "bình thường sau trận thua bạn thức thêm bao lâu?" lúc onboarding
 để có mốc so sánh thô.
@@ -202,10 +241,10 @@ Lưu ý: chỉ số 2 không có nhóm đối chứng → khảo sát thêm "bì
 |---|---|---|---|---|---|
 | **T5 22/10** | Khung app Compose, FCM | Thử API thức/ngủ trên 3 dòng máy | FastAPI, Postgres, Firebase, key API-Football | Nháp prompt, danh sách dữ kiện | Hướng dẫn giọng văn câu vỗ vai |
 | **T6 23/10** | Hội anh em (UI) | PresenceProbe v0 | Hợp đồng API (OpenAPI), ghi dữ liệu trận Atlético | Bộ lọc tên người | 20 câu dự phòng đầu · **M0** |
-| T7–CN 24–25/10 | Thông báo "Hang đã mở" | Báo thức, giờ đi làm, DND | MatchStateMachine, CaveService | Sinh câu từ dữ kiện thật | Cột mốc lịch sử MU đã kiểm chứng |
-| T2 26/10 | Màn hang + vỗ vai | Thông báo im lặng buổi sáng | Groups, Presence API | Lượt chấm "có chê ai không" | Đủ 40 câu dự phòng |
+| T7–CN 24–25/10 | Thông báo "Hang đang mở" + Vào hang / Thôi | Báo thức, giờ đi làm, DND | MatchStateMachine, CaveService (Cave, Membership, LightWindow) | Sinh câu từ dữ kiện thật | Cột mốc lịch sử MU đã kiểm chứng |
+| T2 26/10 | Màn hang + vỗ vai + nút Ra khỏi hang | Thông báo im lặng buổi sáng | Groups, Presence API | Lượt chấm "có chê ai không" | Đủ 40 câu dự phòng |
 | T3 27/10 | Tắt đèn | Dịch vụ nền đo tắt máy | Replay ×N | Sinh trước theo kịch bản | Chấm câu AI vòng 1 |
-| **T4 28/10** | Ra khỏi hang | Telemetry client | PatService tích hợp | Sửa prompt | **M1: replay chạy hết vòng lặp** |
+| **T4 28/10** | Đóng hang khi thắng + màn ăn mừng | Telemetry client | PatService tích hợp | Sửa prompt | **M1: replay chạy hết vòng lặp** |
 | T5 29/10 | FLAG_SECURE, onboarding + màn đồng ý | Nhắc trước trận đêm | Lịch trận + nhắc | Bộ test 20 trận thua cũ | Tuyển 20 fan (Android, có bạn MU) |
 | T6 30/10 | Sửa lỗi UI | Kiểm thử Samsung/Xiaomi | Telemetry, dashboard trực | Chấm & khoá prompt | Soạn khảo sát |
 | T7 31/10 | Dry-run nội bộ (trận MU cuối tuần nếu có, hoặc replay) | ← | ← | ← | Kịch bản demo |
@@ -222,16 +261,22 @@ Từ 1/11 chỉ sửa lỗi.
 ## 5. Kiểm thử
 
 - **Unit:** luật thức/ngủ (DND, màn hình, điểm danh, giờ làm, múi giờ VN UTC+7 & Nhật UTC+9),
-  `closes_at`, dòng "còn kịp ngủ X tiếng", chống trùng sự kiện hết trận, chọn ra hang khi thắng, `should_open_cave` (L; D sau L; D sau D/W; thua/thắng luân lưu; trận trước là giao hữu).
+  `LightWindow` 30', dòng "còn kịp ngủ X tiếng", chống trùng sự kiện hết trận,
+  `next_cave_open` / `lights_on` (L; L→D→D vẫn mở; D khi đóng; W đóng; thua/thắng luân lưu; bỏ giao hữu),
+  vào/ra/vào lại, MU thắng chỉ đưa ra người đang trong hang.
 - **AI:** bộ test 20 trận thua cũ + 30 câu "bẫy" (prompt chứa tên cầu thủ, số liệu sai) → bộ lọc phải loại.
-- **E2E:** replay trên thiết bị thật: 1 máy thức, 1 máy DND, 1 máy tắt màn hình → chỉ máy thức được gọi,
-  2 máy còn lại nhận thông báo im lặng buổi sáng; hang đóng đúng 30'; trận hoà giả lập sau trận thua → hang vẫn mở; trận thắng giả lập → cả hội nhận "Ra khỏi hang".
+- **E2E:** replay trên thiết bị thật với 4 máy: A thức + vào hang, B thức + bấm "Thôi", C bật DND, D tắt màn hình →
+  chỉ A, B được gọi; C, D nhận thông báo im lặng buổi sáng; sau 30' hang tắt đèn nhưng vẫn mở;
+  A bấm Ra khỏi hang rồi vào lại được; trận hoà giả lập → hang sáng đèn lại; trận thắng giả lập →
+  hang đóng, **chỉ người đang trong hang** nhận "Ra khỏi hang", B không nhận gì.
 
 ## 6. Rủi ro & phương án
 
 | Rủi ro | Phương án |
 |---|---|
-| **MU thắng đêm 4/11, hoặc hoà mà trận ngay trước đó không thua → không có hang** (proposal gọi đây là "rủi ro lớn nhất") | Diễn tập bằng replay tối 3/11 với chính nhóm pilot để có dữ liệu vòng lặp; nếu MU thắng thật thì đo luồng "Ra khỏi hang" |
+| **MU thắng đêm 4/11, hoặc hoà khi hang đang đóng → không sáng đèn** (proposal gọi đây là "rủi ro lớn nhất") | Diễn tập bằng replay tối 3/11 với chính nhóm pilot để có dữ liệu vòng lặp; nếu MU thắng thật thì đo luồng "Ra khỏi hang" (cần hang đã mở từ diễn tập hoặc trận thua trước đó) |
+| Hang mở nhiều ngày → than thở kéo dài | Chỉ cho vỗ vai trong 30' sáng đèn sau mỗi trận; ngoài lúc đó hang im lặng, không thông báo |
+| Vào hang là tự chọn → ít người vào, hang vắng | Đo `cave_enter / invite_shown`; thông báo nêu tên anh em đang trong hang để kéo người vào |
 | Đoán sai thức/ngủ → đánh thức người đang ngủ | Mặc định coi là ngủ; thông báo hang không kêu nếu không chắc; nút "Đừng gọi tôi đêm nay" |
 | FCM im lặng trễ do Doze/OEM | FCM ưu tiên cao; hướng dẫn tắt tối ưu pin cho pilot; app tự kéo trạng thái khi mở |
 | AI bịa số liệu hoặc lỡ chê cầu thủ | Chỉ dùng dữ kiện đầu vào, bộ lọc 2 lớp, kho dự phòng |
@@ -240,10 +285,15 @@ Từ 1/11 chỉ sửa lỗi.
 
 ## 7. Câu hỏi mở (chốt trước 23/10)
 
-- ~~**Q1.** MU **hoà** có mở hang không?~~ **Đã chốt 22/10:** hoà mà trận trước thua thì vẫn mở hang (§3.1).
-  Còn một trường hợp biên: thua → hoà → hoà (trận trước là hoà). Theo luật hiện tại trận thứ ba **không** mở hang.
+Đã chốt 22/10:
+
+- **Hoà:** hang giữ nguyên – đang mở (sau trận thua) thì vẫn mở và sáng đèn lại; thua → hoà → hoà vẫn mở (§3.1).
+- **Hang chỉ đóng khi MU thắng**; 30 phút sau còi chỉ là **tắt đèn**, không đóng hang (§3.3).
+- **Vào hang và ra hang là quyết định của người dùng**; MU thắng thì tự động đưa ra, và **chỉ người đang trong hang**
+  nhận "Ra khỏi hang" (§3.3).
+
+Còn mở:
+
 - **Q2.** Mockup có avatar "N" mờ (người đang ngủ), trong khi luật nói "không điểm danh ai vắng".
-  Đề xuất: **chỉ hiện người đang trong hang**, không hiện người vắng.
-- **Q3.** Ra khỏi hang: chỉ hội đã từng vào hang, hay mọi người dùng? (Đề xuất: mọi hội có hang mở trong 14 ngày qua.)
-- **Q4.** Đóng hang cứng 30 phút, hay sớm hơn nếu báo thức quá gần (vd. còn < 2 tiếng)?
+  Đề xuất: **chỉ hiện người đang trong hang**, không hiện người ở ngoài.
 - **Q5.** Ngân sách: gói API-Football trả phí + Claude API (chỉ vài lượt gọi mỗi trận) + Firebase (gói miễn phí đủ cho pilot).
