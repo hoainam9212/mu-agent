@@ -15,7 +15,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "vn.vaohang"
+        applicationId = "com.vnext.muagent" // trùng app đã đăng ký trong Firebase
         minSdk = 26
         targetSdk = 35
         versionCode = 1
