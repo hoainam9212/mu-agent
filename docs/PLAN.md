@@ -105,11 +105,17 @@ mu-agent/
 
 ### 3.1 Theo dõi trận (SRV)
 
-- API-Football, MU team id = 33. Job hằng ngày lấy lịch trận; trong cửa sổ **kickoff − 10' → FT + 15'**
-  poll `/fixtures?id=…` mỗi ~15s. Gói Free (100 request/ngày) không đủ → cần gói trả phí
-  (Pro 7.500 request/ngày theo hướng dẫn của API-Football; xác nhận giá trên dashboard).
-- `MatchStateMachine`: `SCHEDULED → LIVE → FINISHED`. Coi là hết trận khi status ∈ {FT, AET, PEN}.
-  Chống xử lý trùng theo `fixture_id`; nếu API trễ quá 10 phút sau giờ dự kiến hết trận thì cảnh báo người trực.
+- **Chốt 22/10: dùng API miễn phí trước.** Hang chỉ cần **kết quả cuối trận**, không cần diễn biến, nên:
+  lịch trận 1 request mỗi 12 tiếng; kết quả bắt đầu hỏi ở **phút 105** sau giờ bóng lăn, **mỗi 3 phút**, tới khi
+  có kết quả (bỏ cuộc sau 6 tiếng). Mỗi trận tốn khoảng 5–40 request, vừa gói Free. Đổi lại, hang mở trễ
+  tối đa ~3 phút sau còi.
+- Hai nguồn, chọn bằng biến môi trường (`server/README.md`):
+  - **football-data.org** (khuyên dùng cho gói Free): có Premier League + Champions League mùa hiện tại,
+    10 request/phút; **không có** FA Cup, League Cup, Europa League → các trận đó người trực nhập tay.
+  - **API-Football** (MU = 33): gói Free 100 request/ngày; theo nhiều báo cáo gói Free có thể **không có mùa hiện tại**
+    – lỗi trả về được hiện ở `/v1/admin/status`. Cần thử với key thật trước pilot.
+- Trạng thái trận: `SCHEDULED → LIVE → FINISHED` (FT, AET, PEN, AWD). Mỗi trận chỉ xử lý một lần.
+  Trận cũ thấy được lúc máy chủ mới khởi động chỉ được ghi nhận, không mở/đóng hang muộn.
 - Kết quả trận chính thức (mọi giải, bỏ giao hữu) cập nhật trạng thái hang:
   - **Thua → hang mở** (nếu đang mở thì vẫn mở) và **sáng đèn**.
   - **Hoà → hang giữ nguyên.** Đang mở thì sáng đèn lại ("vẫn chưa ra được hang"); đang đóng thì không làm gì.
@@ -128,9 +134,9 @@ mu-agent/
   def lights_on(is_open_after: bool, result: str) -> bool:
       return is_open_after and result != "W"   # sáng đèn 30' sau trận
   ```
-- **Admin endpoint** để người trực bắn sự kiện tay nếu API-Football lỗi trong đêm pilot.
-- **Replay:** ghi sự kiện trận Atlético 2-0 MU (14/10) thành JSON; `POST /v1/replay {fixture, speed}` phát lại
-  cho một nhóm demo riêng, không đụng người dùng thật.
+- **Nhập tay** (`/v1/admin/fixtures`, `/v1/admin/fixtures/{id}/result`) khi API lỗi hoặc giải không có trong gói Free.
+- **Replay:** `POST /v1/admin/replay {scenario, speed}` – trận Atlético 2-0 MU (13/10, giờ VN là 14/10) tua nhanh,
+  chỉ chạy cho **hội demo** (`/v1/admin/groups/{id}/demo`), không đụng người dùng thật. Có thêm `draw-demo`, `win-demo`.
 
 ### 3.2 "Ai đang thức" – phần agent quan trọng nhất (AND-2 + SRV)
 
@@ -140,13 +146,14 @@ rồi báo `POST /v1/presence {fixture_id, state}` với `state ∈ {awake, asle
 Luật đề xuất cho MVP (đơn giản, giải thích được):
 
 ```
-asleep  nếu: đang bật Không làm phiền / chế độ ngủ (getCurrentInterruptionFilter ≠ ALL)
-        hoặc người dùng đã bấm "Thôi, ngủ luôn"/"Tối nay không xem" cho trận này
-awake   nếu: màn hình đang bật (PowerManager.isInteractive)
-        hoặc người dùng đã "điểm danh" trận này (bấm "Đêm nay xem" ở thông báo trước trận)
-             và có dùng điện thoại trong 15 phút gần nhất (mở app / tương tác thông báo)
-busy    nếu: giờ địa phương nằm trong "giờ đi làm" người dùng tự đặt (vd. fan ở Nhật 08:00–18:00)
-còn lại  → asleep (thà không gọi còn hơn đánh thức)
+Xét theo thứ tự, gặp điều kiện nào trước thì lấy kết quả đó:
+1. asleep  nếu: đang bật Không làm phiền / chế độ ngủ (getCurrentInterruptionFilter ≠ ALL)
+              hoặc người dùng đã bấm "Thôi, ngủ luôn"/"Tối nay không xem" cho trận này
+2. busy    nếu: giờ địa phương nằm trong "giờ đi làm" người dùng tự đặt (vd. fan ở Nhật 08:00–18:00),
+              kể cả khi màn hình đang bật → để hết giờ làm mới báo
+3. awake   nếu: màn hình đang bật (PowerManager.isInteractive)
+              hoặc đã "điểm danh" trận này ("Đêm nay xem") và có dùng máy trong 15 phút gần nhất
+4. còn lại → asleep (thà không gọi còn hơn đánh thức)
 ```
 
 - Người `asleep`/`busy`: **không rung, không kêu**. Gửi một thông báo im lặng vào sáng
@@ -188,7 +195,7 @@ LightWindow {cave_id, fixture_id, starts_at (= FT), ends_at (= FT + 30')}
 
 1. Lúc hết trận, `PatService` gom **dữ kiện đã kiểm chứng** từ API: tỷ số, đối thủ, giải, chuỗi thua/không thắng,
    thứ hạng hiện tại, vài cột mốc lịch sử do CONTENT soạn sẵn (vd. "mùa 24-25 hạng 15").
-2. Gọi Claude (vd. `claude-sonnet-5-5`; thử `claude-haiku-5-5` nếu cần nhanh hơn) sinh ~12 câu.
+2. Gọi Claude (mặc định `claude-opus-5-5`, đổi bằng `PAT_MODEL`) sinh ~12 câu.
    Prompt bắt buộc: **tự trào về MU**, mỗi câu có **đồng cảm + một góc nhìn mới**, ≤ 120 ký tự, giọng fan Việt,
    **chỉ dùng dữ kiện được cung cấp** (không tự bịa số liệu).
 3. **Bộ lọc** (không qua được thì loại câu):
@@ -198,8 +205,8 @@ LightWindow {cave_id, fixture_id, starts_at (= FT), ends_at (= FT + 30')}
 4. Chọn 8 câu tốt nhất; **thiếu thì bù từ kho dự phòng** (~40 câu CONTENT viết sẵn, có nhãn theo kịch bản:
    thua 1 bàn, thua đậm, thua phút cuối, chuỗi thua, **hoà khi hang đang mở** – "vẫn chưa ra được hang",
    ở trong hang nhiều ngày…). API lỗi → dùng 100% kho dự phòng.
-5. Để kịp lúc 4h sáng: **sinh trước** bộ câu cho các kịch bản khả dĩ ngay khi hết hiệp 1 và phút 80,
-   lúc hết trận chỉ cần chọn đúng bộ và chèn tỷ số.
+5. Với API miễn phí không theo dõi diễn biến được, nên câu được soạn **ngay khi biết kết quả, trước khi gửi thông báo**
+   (giới hạn 60 giây; quá thời gian thì dùng kho dự phòng). Ai mở hang cũng thấy ngay câu vỗ vai.
 
 - Mỗi người thấy 3–4 câu ngẫu nhiên từ 8 câu; "Vỗ vai lại" cũng chọn từ đó.
 - **Bộ test** trước pilot: chạy 20 trận thua cũ của MU, CONTENT chấm tay; mục tiêu 0 câu chê người, 0 số liệu sai.
@@ -299,7 +306,7 @@ Còn mở:
 
   | Khoản | Ghi chú |
   |---|---|
-  | API-Football gói trả phí | Khoản tiền mặt duy nhất chắc chắn phải trả; Pro ~19 USD/tháng theo các trang so sánh – xác nhận trên trang giá chính thức |
+  | API dữ liệu trận | **Chốt 22/10: tạm dùng gói miễn phí** (football-data.org hoặc API-Football Free, §3.1). Nâng gói trả phí sau nếu thiếu giải/mùa |
   | Claude API | Chỉ vài lượt gọi mỗi trận (sinh câu + chấm), không theo từng người → chi phí rất nhỏ |
   | Firebase (FCM, Anonymous Auth) | FCM miễn phí; gói miễn phí đủ cho 20 người |
   | Máy chủ (Cloud Run hoặc VPS nhỏ) | Lưu lượng pilot rất thấp, có thể nằm trong hạn mức miễn phí của Cloud Run |
@@ -310,3 +317,17 @@ Còn mở:
   không dùng dịch vụ nào trong nhóm đó, nên nhiều khả năng credit này **không giúp được**. Cần xác nhận trong
   Cloud Console → Billing → Credits → bấm vào credit để xem danh sách dịch vụ/SKU áp dụng. Không nên đổi kiến trúc
   chỉ để tiêu credit.
+
+---
+
+## 8. Trạng thái triển khai (22/10)
+
+| Phần | Trạng thái | Kiểm tra |
+|---|---|---|
+| `server/` – canh trận (football-data.org / API-Football / nhập tay), luật hang, vào/ra, sáng/tắt đèn, rủ anh em, vỗ vai, câu AI + bộ lọc + kho dự phòng, replay, telemetry, admin | Xong bản đầu | 71 test pytest qua, chạy thử bằng uvicorn |
+| `android/core/` – luật thức/ngủ, giờ báo sáng, dòng "còn kịp ngủ", nhắc trận đêm, đọc tin FCM, lời thông báo | Xong bản đầu | 24 test JUnit qua |
+| `android/app/` – đăng ký, hội anh em, màn hang (FLAG_SECURE), ăn mừng, nhận FCM, báo sáng (WorkManager), đo tắt máy | Đã viết, **chưa build** | Môi trường cloud chặn tải Android SDK (`dl.google.com`) |
+| Firebase project, `google-services.json`, khoá dịch vụ FCM cho máy chủ | Chưa làm | Cần người có tài khoản Google tạo |
+| Token football-data.org / key API-Football | Chưa có | Đăng ký miễn phí, thử `/v1/admin/schedule/refresh` |
+| Triển khai máy chủ (Cloud Run hoặc VPS) | Chưa làm | |
+
