@@ -34,7 +34,7 @@ Mốc chính:
 **Làm**
 
 1. Tạo/tham gia **hội anh em** bằng mã mời; hai bên cùng đồng ý mới vào chung một hang.
-2. Máy chủ **canh trận MU** trực tiếp; còi mãn cuộc mà MU thua thì **tự mở hang** cho từng hội.
+2. Máy chủ **canh trận MU** trực tiếp; còi mãn cuộc mà MU thua (hoặc hoà ngay sau một trận thua) thì **tự mở hang** cho từng hội.
 3. **Chỉ gọi người đang thức**; người đã ngủ hoặc đang bận thì sáng mới báo nhẹ.
 4. Thông báo "Hang đã mở. Tuấn, Hùng và Long cũng đang thức" + nút **Rủ anh em vào hang** / **Thôi, ngủ luôn**.
 5. Màn hang: avatar người trong hang, các cái vỗ vai nhận được, nút **Vỗ vai lại** (chọn 1 trong 3–4 câu soạn sẵn).
@@ -97,8 +97,17 @@ mu-agent/
   (Pro 7.500 request/ngày theo hướng dẫn của API-Football; xác nhận giá trên dashboard).
 - `MatchStateMachine`: `SCHEDULED → LIVE → FINISHED`. Coi là hết trận khi status ∈ {FT, AET, PEN}.
   Chống xử lý trùng theo `fixture_id`; nếu API trễ quá 10 phút sau giờ dự kiến hết trận thì cảnh báo người trực.
-- Kết quả: **thua → mở hang**, **thắng → ra khỏi hang** (cho các hội có hang mở trong 14 ngày qua),
-  **hoà → không làm gì** *(câu hỏi mở Q1)*.
+- Kết quả:
+  - **Thua → mở hang.**
+  - **Hoà mà trận trước thua → vẫn mở hang** ("vẫn chưa ra được hang"). Hoà mà trận trước không thua → không làm gì.
+    "Trận trước" = trận chính thức liền trước của MU ở **mọi giải** (lấy từ `/fixtures?team=33&last=2`, bỏ giao hữu).
+  - **Thắng → ra khỏi hang** (cho các hội có hang mở trong 14 ngày qua).
+  - Thắng/thua trên chấm luân lưu (status PEN) tính theo kết quả luân lưu.
+
+  ```python
+  def should_open_cave(result: str, prev_result: str | None) -> bool:
+      return result == "L" or (result == "D" and prev_result == "L")
+  ```
 - **Admin endpoint** để người trực bắn sự kiện tay nếu API-Football lỗi trong đêm pilot.
 - **Replay:** ghi sự kiện trận Atlético 2-0 MU (14/10) thành JSON; `POST /v1/replay {fixture, speed}` phát lại
   cho một nhóm demo riêng, không đụng người dùng thật.
@@ -152,7 +161,7 @@ còn lại  → asleep (thà không gọi còn hơn đánh thức)
    - Không chê/đổ lỗi (từ điển + một lượt Claude chấm "câu này có chê ai không?").
    - Số liệu trong câu phải khớp dữ kiện đầu vào.
 4. Chọn 8 câu tốt nhất; **thiếu thì bù từ kho dự phòng** (~40 câu CONTENT viết sẵn, có nhãn theo kịch bản:
-   thua 1 bàn, thua đậm, thua phút cuối, chuỗi thua…). API lỗi → dùng 100% kho dự phòng.
+   thua 1 bàn, thua đậm, thua phút cuối, chuỗi thua, **hoà sau trận thua** – "vẫn chưa ra được hang"…). API lỗi → dùng 100% kho dự phòng.
 5. Để kịp lúc 4h sáng: **sinh trước** bộ câu cho các kịch bản khả dĩ ngay khi hết hiệp 1 và phút 80,
    lúc hết trận chỉ cần chọn đúng bộ và chèn tỷ số.
 
@@ -202,7 +211,7 @@ Lưu ý: chỉ số 2 không có nhóm đối chứng → khảo sát thêm "bì
 | T7 31/10 | Dry-run nội bộ (trận MU cuối tuần nếu có, hoặc replay) | ← | ← | ← | Kịch bản demo |
 | **CN 1/11** | **Dừng thêm tính năng** | ← | Load test FCM | ← | **M2** |
 | T2 2/11 | Phát APK | Hướng dẫn tắt tối ưu pin | Trực thử | ← | Onboard pilot, lập hội |
-| T3 3/11 21:00 | **Diễn tập** với pilot bằng replay (phòng khi MU thắng/hoà đêm thật) | ← | ← | ← | Khảo sát diễn tập |
+| T3 3/11 21:00 | **Diễn tập** với pilot bằng replay (phòng khi đêm thật không mở hang) | ← | ← | ← | Khảo sát diễn tập |
 | **T4 4/11** | 03:00–05:00 trực đêm pilot | ← | ← | ← | Khảo sát sáng · **M3** |
 | T5 5/11 | Retro | ← | ← | ← | **Báo cáo pilot** |
 
@@ -213,16 +222,16 @@ Từ 1/11 chỉ sửa lỗi.
 ## 5. Kiểm thử
 
 - **Unit:** luật thức/ngủ (DND, màn hình, điểm danh, giờ làm, múi giờ VN UTC+7 & Nhật UTC+9),
-  `closes_at`, dòng "còn kịp ngủ X tiếng", chống trùng sự kiện hết trận, chọn ra hang khi thắng.
+  `closes_at`, dòng "còn kịp ngủ X tiếng", chống trùng sự kiện hết trận, chọn ra hang khi thắng, `should_open_cave` (L; D sau L; D sau D/W; thua/thắng luân lưu; trận trước là giao hữu).
 - **AI:** bộ test 20 trận thua cũ + 30 câu "bẫy" (prompt chứa tên cầu thủ, số liệu sai) → bộ lọc phải loại.
 - **E2E:** replay trên thiết bị thật: 1 máy thức, 1 máy DND, 1 máy tắt màn hình → chỉ máy thức được gọi,
-  2 máy còn lại nhận thông báo im lặng buổi sáng; hang đóng đúng 30'; trận thắng giả lập → cả hội nhận "Ra khỏi hang".
+  2 máy còn lại nhận thông báo im lặng buổi sáng; hang đóng đúng 30'; trận hoà giả lập sau trận thua → hang vẫn mở; trận thắng giả lập → cả hội nhận "Ra khỏi hang".
 
 ## 6. Rủi ro & phương án
 
 | Rủi ro | Phương án |
 |---|---|
-| **MU thắng hoặc hoà đêm 4/11 → không có hang** (proposal gọi đây là "rủi ro lớn nhất") | Diễn tập bằng replay tối 3/11 với chính nhóm pilot để có dữ liệu vòng lặp; nếu MU thắng thật thì đo luồng "Ra khỏi hang" |
+| **MU thắng đêm 4/11, hoặc hoà mà trận ngay trước đó không thua → không có hang** (proposal gọi đây là "rủi ro lớn nhất") | Diễn tập bằng replay tối 3/11 với chính nhóm pilot để có dữ liệu vòng lặp; nếu MU thắng thật thì đo luồng "Ra khỏi hang" |
 | Đoán sai thức/ngủ → đánh thức người đang ngủ | Mặc định coi là ngủ; thông báo hang không kêu nếu không chắc; nút "Đừng gọi tôi đêm nay" |
 | FCM im lặng trễ do Doze/OEM | FCM ưu tiên cao; hướng dẫn tắt tối ưu pin cho pilot; app tự kéo trạng thái khi mở |
 | AI bịa số liệu hoặc lỡ chê cầu thủ | Chỉ dùng dữ kiện đầu vào, bộ lọc 2 lớp, kho dự phòng |
@@ -231,7 +240,8 @@ Từ 1/11 chỉ sửa lỗi.
 
 ## 7. Câu hỏi mở (chốt trước 23/10)
 
-- **Q1.** MU **hoà** có mở hang không? (Đề xuất: không, chỉ thua mới mở.)
+- ~~**Q1.** MU **hoà** có mở hang không?~~ **Đã chốt 22/10:** hoà mà trận trước thua thì vẫn mở hang (§3.1).
+  Còn một trường hợp biên: thua → hoà → hoà (trận trước là hoà). Theo luật hiện tại trận thứ ba **không** mở hang.
 - **Q2.** Mockup có avatar "N" mờ (người đang ngủ), trong khi luật nói "không điểm danh ai vắng".
   Đề xuất: **chỉ hiện người đang trong hang**, không hiện người vắng.
 - **Q3.** Ra khỏi hang: chỉ hội đã từng vào hang, hay mọi người dùng? (Đề xuất: mọi hội có hang mở trong 14 ngày qua.)
