@@ -414,22 +414,24 @@ fun CampScene(
         seats.forEach { (m, x, y) ->
             val text = said[m.id] ?: return@forEach
             val bx = x.coerceIn(-100f, 100f)
-            Column(
-                Modifier.offset(bx.dp, (y - avatar.value * 0.62f - 30f).dp).zIndex(2000f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
+            // Người ngồi phía sau lửa: bong bóng trên đầu; người phía trước: bong bóng dưới chân, để không che ai.
+            val above = y < 20f
+            val tail: @Composable () -> Unit = {
+                Canvas(Modifier.offset(x = (x - bx).dp).size(14.dp, 7.dp)) {
+                    val p = if (above) Path().apply { moveTo(0f, 0f); lineTo(size.width, 0f); lineTo(size.width / 2, size.height); close() }
+                    else Path().apply { moveTo(0f, size.height); lineTo(size.width, size.height); lineTo(size.width / 2, 0f); close() }
+                    drawPath(p, Ink.copy(alpha = 0.95f))
+                }
+            }
+            val by = if (above) y - avatar.value * 0.62f - 30f else y + avatar.value * 0.62f + 30f
+            Column(Modifier.offset(bx.dp, by.dp).zIndex(2000f), horizontalAlignment = Alignment.CenterHorizontally) {
+                if (!above) tail()
                 Text(
                     text, color = CaveBlack, fontSize = 12.sp, lineHeight = 15.sp, textAlign = TextAlign.Center, maxLines = 3,
                     modifier = Modifier.widthIn(max = 150.dp).clip(RoundedCornerShape(14.dp)).background(Ink.copy(alpha = 0.95f))
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                 )
-                // Đuôi bong bóng chỉ xuống người nói.
-                Canvas(Modifier.offset(x = (x - bx).dp).size(14.dp, 7.dp)) {
-                    drawPath(
-                        Path().apply { moveTo(0f, 0f); lineTo(size.width, 0f); lineTo(size.width / 2, size.height); close() },
-                        Ink.copy(alpha = 0.95f),
-                    )
-                }
+                if (above) tail()
             }
         }
     }
