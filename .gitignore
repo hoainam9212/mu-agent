@@ -11,3 +11,4 @@ local.properties
 .idea/
 *.iml
 google-services.json
+android/app/src/test/snapshots/

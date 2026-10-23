@@ -3,6 +3,8 @@ plugins {
     kotlin("android")
     kotlin("plugin.compose")
     kotlin("plugin.serialization")
+    // Chụp ảnh màn hình Compose trên JVM (không cần máy thật): ./gradlew :app:recordPaparazziDebug
+    id("app.cash.paparazzi")
 }
 
 // Chỉ bật Firebase khi đã có file cấu hình (không commit file này).
@@ -56,4 +58,6 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+
+    testImplementation("junit:junit:4.13.2")
 }

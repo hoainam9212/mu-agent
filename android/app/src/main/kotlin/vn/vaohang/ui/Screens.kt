@@ -346,7 +346,7 @@ private fun StatusChip(open: Boolean) {
 }
 
 @Composable
-private fun GroupCard(group: GroupDto, meId: Long, vm: AppViewModel) {
+private fun GroupCard(group: GroupDto, meId: Long, actions: UiActions) {
     val context = LocalContext.current
     val cave = group.cave
     val open = cave != null && cave.status == "OPEN"
@@ -371,7 +371,7 @@ private fun GroupCard(group: GroupDto, meId: Long, vm: AppViewModel) {
         }
         if (open && cave != null) {
             Body("MU vừa thua. Hang mở rồi, anh em đang quây quanh lửa.", Ink)
-            FireButton("🔥  Vào xem hang", onClick = { vm.openCave(cave.id) }, pulse = true, modifier = Modifier.fillMaxWidth())
+            FireButton("🔥  Vào xem hang", onClick = { actions.openCave(cave.id) }, pulse = true, modifier = Modifier.fillMaxWidth())
         } else {
             Body("MU thua thì hang mở, cả hội vào ngồi quanh lửa.")
         }
@@ -397,14 +397,14 @@ private fun GroupCard(group: GroupDto, meId: Long, vm: AppViewModel) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Caveman(p.nickname, p.id, width = 36.dp, showName = false)
                 Text("${p.nickname} xin vào hội", color = Ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                FireButton("Duyệt", onClick = { vm.approve(group.id, p.id) })
+                FireButton("Duyệt", onClick = { actions.approve(group.id, p.id) })
             }
         }
     }
 }
 
 @Composable
-fun HomeScreen(state: UiState, vm: AppViewModel) {
+fun HomeScreen(state: UiState, actions: UiActions) {
     var creating by remember { mutableStateOf(false) }
     var joining by remember { mutableStateOf(false) }
     LazyColumn(
@@ -420,7 +420,7 @@ fun HomeScreen(state: UiState, vm: AppViewModel) {
                         "Chào ${state.nickname ?: "anh em"} 👋", color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Black,
                     )
                 }
-                TextButton(onClick = vm::refreshGroups) { Text("↻", color = Mute, fontSize = 24.sp) }
+                TextButton(onClick = actions::refreshGroups) { Text("↻", color = Mute, fontSize = 24.sp) }
             }
         }
         state.nextMatch?.let { m -> item { NextMatchCard(m) } }
@@ -440,12 +440,12 @@ fun HomeScreen(state: UiState, vm: AppViewModel) {
             }
         } else {
             item { SectionTitle("Hội anh em") }
-            items(state.groups, key = { it.id }) { GroupCard(it, state.meId, vm) }
+            items(state.groups, key = { it.id }) { GroupCard(it, state.meId, actions) }
         }
     }
-    if (creating) TextDialog("Đặt tên hội", "Tạo hội", onDismiss = { creating = false }) { vm.createGroup(it); creating = false }
+    if (creating) TextDialog("Đặt tên hội", "Tạo hội", onDismiss = { creating = false }) { actions.createGroup(it); creating = false }
     if (joining) TextDialog("Mã mời (6 ký tự)", "Xin vào", code = true, onDismiss = { joining = false }) {
-        vm.joinGroup(it); joining = false
+        actions.joinGroup(it); joining = false
     }
 }
 
@@ -518,8 +518,10 @@ private fun PatChoice(text: String, onClick: () -> Unit) {
 @Composable
 private fun FireOutPanel() {
     val context = LocalContext.current
-    val app = context.applicationContext as VaoHangApp
-    val alarm = remember { LightsOut.text(Instant.now(), PresenceProbe(context, app.prefs).nextAlarm(), ZoneId.systemDefault()) }
+    val alarm = remember {
+        val app = context.applicationContext as? VaoHangApp
+        app?.let { LightsOut.text(Instant.now(), PresenceProbe(context, it.prefs).nextAlarm(), ZoneId.systemDefault()) }
+    }
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Rock.copy(alpha = 0.85f)).padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -542,20 +544,20 @@ private fun sceneCaption(cave: CaveView, burning: Boolean): String {
 }
 
 @Composable
-fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, vm: AppViewModel) {
+fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, actions: UiActions) {
     val context = LocalContext.current
     // Không chụp màn hình, không chuyển tiếp ra ngoài.
     DisposableEffect(Unit) {
-        val window = (context as Activity).window
-        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        onDispose { window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
+        val window = (context as? Activity)?.window
+        window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
     }
-    BackHandler(onBack = vm::home)
+    BackHandler(onBack = actions::home)
     // Tải lại đều đặn để thấy anh em mới vào và câu vỗ vai mới.
     LaunchedEffect(cave.id) {
         while (true) {
             delay(15_000)
-            vm.refreshCaveQuietly(cave.id)
+            actions.refreshCaveQuietly(cave.id)
         }
     }
     val open = cave.status == "OPEN"
@@ -565,12 +567,12 @@ fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, vm: AppViewModel)
             Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            TextButton(onClick = vm::home) { Text("‹  ${groupName ?: "Hội anh em"}", color = Mute, fontSize = 15.sp) }
+            TextButton(onClick = actions::home) { Text("‹  ${groupName ?: "Hội anh em"}", color = Mute, fontSize = 15.sp) }
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 cave.score?.let { ScoreBoard(it) }
             }
             if (burning) {
-                FireTimer(cave.lights.until, onExpired = { vm.refreshCaveQuietly(cave.id) })
+                FireTimer(cave.lights.until, onExpired = { actions.refreshCaveQuietly(cave.id) })
             } else if (open) {
                 Body("Lửa đã tắt · hang vẫn mở tới khi MU thắng", align = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             }
@@ -580,7 +582,7 @@ fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, vm: AppViewModel)
                 !open -> Body("Hang đã đóng – MU thắng rồi!", Gold, align = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                 !cave.meInside -> {
                     Body("Vào hay không là bạn chọn.", align = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                    FireButton("🔥  VÀO HANG NGỒI CÙNG", onClick = { vm.enterCave(cave.id) }, pulse = true, modifier = Modifier.fillMaxWidth())
+                    FireButton("🔥  VÀO HANG NGỒI CÙNG", onClick = { actions.enterCave(cave.id) }, pulse = true, modifier = Modifier.fillMaxWidth())
                 }
                 else -> {
                     if (!burning) FireOutPanel()
@@ -590,12 +592,12 @@ fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, vm: AppViewModel)
                     }
                     if (burning && cave.choices.isNotEmpty()) {
                         SectionTitle("Vỗ vai anh em – chọn một câu")
-                        cave.choices.forEach { c -> PatChoice(c.text) { vm.pat(cave.id, c.id) } }
+                        cave.choices.forEach { c -> PatChoice(c.text) { actions.pat(cave.id, c.id) } }
                     }
                     if (burning) {
-                        GhostButton("📣  Rủ anh em đang thức", onClick = { vm.invite(cave.id) }, modifier = Modifier.fillMaxWidth())
+                        GhostButton("📣  Rủ anh em đang thức", onClick = { actions.invite(cave.id) }, modifier = Modifier.fillMaxWidth())
                     }
-                    TextButton(onClick = { vm.leaveCave(cave.id) }, modifier = Modifier.fillMaxWidth()) {
+                    TextButton(onClick = { actions.leaveCave(cave.id) }, modifier = Modifier.fillMaxWidth()) {
                         Text("Ra khỏi hang", color = Mute)
                     }
                 }

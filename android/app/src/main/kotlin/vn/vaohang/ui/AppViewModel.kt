@@ -22,6 +22,21 @@ sealed interface Screen {
     data object Celebrate : Screen
 }
 
+/** Những việc màn hình gọi được; tách khỏi ViewModel để vẽ thử màn hình với dữ liệu giả. */
+interface UiActions {
+    fun home()
+    fun refreshGroups()
+    fun createGroup(name: String)
+    fun joinGroup(code: String)
+    fun approve(groupId: Long, userId: Long)
+    fun openCave(caveId: Long)
+    fun enterCave(caveId: Long)
+    fun refreshCaveQuietly(caveId: Long)
+    fun pat(caveId: Long, lineId: Long)
+    fun invite(caveId: Long)
+    fun leaveCave(caveId: Long)
+}
+
 data class UiState(
     val screen: Screen,
     val groups: List<GroupDto> = emptyList(),
@@ -33,7 +48,7 @@ data class UiState(
     val nextMatch: MatchDto? = null,
 )
 
-class AppViewModel(application: Application) : AndroidViewModel(application) {
+class AppViewModel(application: Application) : AndroidViewModel(application), UiActions {
     private val app = application as VaoHangApp
     private val api = app.api
     private val prefs = app.prefs
@@ -87,20 +102,20 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         _state.update { it.copy(groups = groups, nextMatch = next) }
     }
 
-    fun refreshGroups() = launchTask { loadGroups() }
+    override fun refreshGroups() = launchTask { loadGroups() }
 
-    fun createGroup(name: String) = launchTask {
+    override fun createGroup(name: String) = launchTask {
         api.createGroup(name)
         loadGroups()
     }
 
-    fun joinGroup(code: String) = launchTask {
+    override fun joinGroup(code: String) = launchTask {
         api.joinGroup(code)
         loadGroups()
         _state.update { it.copy(message = "Đã gửi xin vào hội. Đợi chủ hội duyệt nhé.") }
     }
 
-    fun approve(groupId: Long, userId: Long) = launchTask {
+    override fun approve(groupId: Long, userId: Long) = launchTask {
         api.approve(groupId, userId)
         loadGroups()
     }
@@ -113,48 +128,50 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
                 _state.update { it.copy(screen = Screen.Celebrate) }
                 viewModelScope.launch { api.telemetry("exit_celebration_opened") }
             }
-            "enter" -> enterCave(caveId, source)
+            "enter" -> enterCaveFrom(caveId, source)
             else -> openCave(caveId)
         }
     }
 
-    fun openCave(caveId: Long) = launchTask {
+    override fun openCave(caveId: Long) = launchTask {
         val cave = api.cave(caveId)
         _state.update { it.copy(screen = Screen.Cave(caveId), cave = cave) }
     }
 
     /** Tải lại màn hang định kỳ để thấy anh em mới vào và câu vỗ vai mới; lỗi mạng thì im lặng. */
-    fun refreshCaveQuietly(caveId: Long) {
+    override fun refreshCaveQuietly(caveId: Long) {
         viewModelScope.launch {
             val cave = runCatching { api.cave(caveId) }.getOrNull() ?: return@launch
             _state.update { if (it.screen == Screen.Cave(caveId)) it.copy(cave = cave) else it }
         }
     }
 
-    fun enterCave(caveId: Long, source: String = "app") = launchTask {
+    override fun enterCave(caveId: Long) = enterCaveFrom(caveId, "app")
+
+    private fun enterCaveFrom(caveId: Long, source: String) = launchTask {
         val cave = api.enter(caveId, source)
         _state.update { it.copy(screen = Screen.Cave(caveId), cave = cave) }
     }
 
-    fun leaveCave(caveId: Long) = launchTask {
+    override fun leaveCave(caveId: Long) = launchTask {
         api.leave(caveId)
         _state.update { it.copy(screen = Screen.Home, cave = null) }
         loadGroups()
     }
 
-    fun pat(caveId: Long, lineId: Long) = launchTask {
+    override fun pat(caveId: Long, lineId: Long) = launchTask {
         val cave = api.pat(caveId, lineId)
         _state.update { it.copy(cave = cave) }
     }
 
-    fun invite(caveId: Long) = launchTask {
+    override fun invite(caveId: Long) = launchTask {
         val n = api.invite(caveId)
         _state.update {
             it.copy(message = if (n == 0) "Anh em ngoài hang đều đang ngủ cả rồi." else "Đã rủ $n anh em đang thức.")
         }
     }
 
-    fun home() {
+    override fun home() {
         _state.update { it.copy(screen = Screen.Home, cave = null) }
         refreshGroups()
     }

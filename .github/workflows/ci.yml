@@ -94,3 +94,31 @@ jobs:
           name: vaohang-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+  ui-preview:
+    name: Android (ảnh chụp giao diện)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Chụp màn hình bằng Paparazzi
+        run: ./gradlew :app:recordPaparazziDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vaohang-ui-preview
+          path: android/app/src/test/snapshots/images/
+          if-no-files-found: error
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Ghép ảnh xem nhanh
+        run: |
+          pip install -q pillow
+          python ../.github/scripts/preview_sheet.py app/src/test/snapshots/images
