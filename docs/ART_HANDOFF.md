@@ -205,6 +205,23 @@ Nộp: tải ảnh độ phân giải cao nhất, đặt đúng tên, chép vào
 `git add art/incoming/square && git commit -m "Art: square share scenes from Gemini [skip ci]" && git push origin claude/exciting-ramanujan-mptsqi`
 (`[skip ci]`: chưa build APK, chủ dự án duyệt ảnh trước). Báo lại chủ dự án ảnh nào phải vẽ lại mấy lần.
 
+**Thêm 2 ảnh nền vuông (cho hội 1–6 người):** hội nhỏ dễ nhận ra ai với ai, nên app dùng nền Gemini rồi tự xếp đúng
+nhân vật của từng người vào (bóng do code vẽ theo vị trí thật). Tạo trong cùng cuộc trò chuyện:
+
+`square_bg_lit.png`
+```
+Square 1:1 image, same chibi 2D style: the inside of the same rocky cave at night, completely EMPTY of people. A small warm campfire burns exactly in the center of the picture, slightly below the middle. Around the fire there is a wide, flat, empty earthen floor (enough room for ten people to sit in a circle around it), lit warm orange by the fire, fading into darkness toward the edges. Rocky walls on both sides, deep blue starry night sky through the cave opening at the top. Nobody in the picture, no animals, no objects on the floor. No text, no logos.
+```
+
+`square_bg_out.png`
+```
+Exactly the same picture and framing as the previous one, but later that night: the campfire has burned out – only charred logs in the same place, a few dim red embers and a thin wisp of smoke. The floor is no longer lit orange; dim cool blue moonlight, calm and quiet. Still completely empty of people. No text, no logos.
+```
+Kiểm tra: hai ảnh cùng khung hình, đống lửa cùng chỗ, sàn trống đủ rộng, không người, không chữ.
+
+**Cách app chọn (đã có code):** hội ≥ 7 người dùng `square_lit_N` / `square_sleep_N`; hội 1–6 người dùng nền
+`square_bg_lit` / `square_bg_out` + nhân vật thật; thiếu ảnh nào thì dùng cảnh ghép lớp.
+
 Ghép vào app (phiên Claude Code làm): thu về 1080×1080 WebP vào `drawable-nodpi/square_lit_N.webp`, `square_sleep_N.webp`;
 `CaveSquare` trong `android/app/src/main/kotlin/vn/vaohang/ui/CaveSquare.kt` chọn ảnh theo `people.size` và `burning`
 (giữ cảnh ghép lớp hiện tại làm dự phòng nếu thiếu ảnh); chạy workflow UI preview để chủ dự án duyệt trước khi build APK.

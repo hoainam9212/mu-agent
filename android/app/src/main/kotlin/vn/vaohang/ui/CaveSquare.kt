@@ -1,5 +1,6 @@
 package vn.vaohang.ui
 
+import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
@@ -7,9 +8,11 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Build
 import android.provider.MediaStore
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.runtime.Composable
@@ -21,6 +24,9 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
@@ -34,19 +40,56 @@ private const val SQUARE_PX = 1080
 private const val SQUARE_FIRE_Y = 0.62f
 private val SquareScene = 330.dp
 
+// Ảnh Gemini vẽ sẵn cả cảnh (`square_lit_N`, `square_sleep_N`) dùng cho hội đông: khó nhận ra ai với ai.
+// Hội nhỏ thì Gemini chỉ vẽ nền (`square_bg_lit`, `square_bg_out`), app xếp đúng nhân vật của từng người vào.
+private const val FULL_SCENE_FROM = 7
+
+// Gốc đống lửa trên ảnh nền vuông (tỉ lệ x, y) và vùng sàn ngồi/nằm được. Đo lại khi có ảnh nền thật.
+private const val BG_FIRE_X = 0.5f
+private const val BG_FIRE_Y = 0.62f
+private val BG_FLOOR = floatArrayOf(0.05f, 0.42f, 0.95f, 0.42f, 0.99f, 1.0f, 0.01f, 1.0f)
+
+/** Id ảnh trong drawable theo tên, 0 nếu chưa có (ảnh Gemini thêm dần, thiếu thì dùng cảnh ghép lớp). */
+@SuppressLint("DiscouragedApi")
+private fun drawableNamed(context: Context, name: String): Int =
+    context.resources.getIdentifier(name, "drawable", context.packageName)
+
 /**
  * Cảnh hang vuông để khoe: chỉ những người đang trong hang, không tên, không chữ, không ai được tô sáng.
  * Lửa cháy thì cả hội ngồi quanh lửa; lửa tắt thì cả hội nằm ngủ.
  */
 @Composable
 fun CaveSquare(people: List<Member>, burning: Boolean, modifier: Modifier = Modifier) {
-    CaveBackdrop(fireOn = burning, fireY = SQUARE_FIRE_Y, shadeEdges = false, modifier = modifier.requiredSize(SquareSide)) {
-        val floor = remember { caveFloorTest(SquareSide.value, SquareSide.value, SQUARE_FIRE_Y) }
-        CampScene(
-            people, meId = Long.MIN_VALUE, burning, height = SquareScene, onFloor = floor,
-            modifier = Modifier.align(Alignment.TopCenter)
-                .offset(y = SquareSide * SQUARE_FIRE_Y - SquareScene / 2 - SquareScene * 0.19f),
-        )
+    val context = LocalContext.current
+    val n = people.size
+    val scene = remember(n, burning) {
+        if (n >= FULL_SCENE_FROM) drawableNamed(context, "square_${if (burning) "lit" else "sleep"}_$n") else 0
+    }
+    val bg = remember(burning) { drawableNamed(context, if (burning) "square_bg_lit" else "square_bg_out") }
+    when {
+        scene != 0 -> Image(painterResource(scene), null, modifier.requiredSize(SquareSide), contentScale = ContentScale.Crop)
+        bg != 0 -> Box(modifier.requiredSize(SquareSide)) {
+            Image(painterResource(bg), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            val side = SquareSide.value
+            val floor = remember {
+                { ox: Float, oy: Float -> inFloor((BG_FIRE_X * side + ox) / side, (BG_FIRE_Y * side + oy) / side, BG_FLOOR) }
+            }
+            CampScene(
+                people, meId = Long.MIN_VALUE, burning, height = SquareScene, onFloor = floor, showFire = false,
+                modifier = Modifier.align(Alignment.TopCenter).offset(
+                    x = SquareSide * (BG_FIRE_X - 0.5f),
+                    y = SquareSide * BG_FIRE_Y - SquareScene / 2 - SquareScene * 0.19f,
+                ),
+            )
+        }
+        else -> CaveBackdrop(fireOn = burning, fireY = SQUARE_FIRE_Y, shadeEdges = false, modifier = modifier.requiredSize(SquareSide)) {
+            val floor = remember { caveFloorTest(SquareSide.value, SquareSide.value, SQUARE_FIRE_Y) }
+            CampScene(
+                people, meId = Long.MIN_VALUE, burning, height = SquareScene, onFloor = floor,
+                modifier = Modifier.align(Alignment.TopCenter)
+                    .offset(y = SquareSide * SQUARE_FIRE_Y - SquareScene / 2 - SquareScene * 0.19f),
+            )
+        }
     }
 }
 

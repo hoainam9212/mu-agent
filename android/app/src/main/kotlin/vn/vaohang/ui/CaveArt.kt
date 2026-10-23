@@ -86,6 +86,9 @@ private val FLOOR = floatArrayOf(
     0.12f, 0.54f, 0.88f, 0.54f, 0.95f, 0.60f, 0.97f, 1.3f, 0.03f, 1.3f, 0.05f, 0.60f,
 )
 
+/** Điểm (x, y) theo tỉ lệ ảnh có nằm trong đa giác [p] (x0, y0, x1, y1, …) không. */
+fun inFloor(x: Float, y: Float, p: FloatArray): Boolean = inPolygon(x, y, p)
+
 private fun inPolygon(x: Float, y: Float, p: FloatArray): Boolean {
     var inside = false
     var j = p.size - 2
@@ -363,6 +366,8 @@ fun CampScene(
     said: Map<Long, String> = emptyMap(),
     onFloor: ((Float, Float) -> Boolean)? = null,
     avatarScale: Float = 1f,
+    // Nền đã vẽ sẵn đống lửa và ánh lửa trên đất (ảnh nền vuông) thì không vẽ thêm.
+    showFire: Boolean = true,
 ) {
     val lit by animateFloatAsState(if (burning) 1f else 0f, tween(2500), label = "ground")
     val n = people.size
@@ -441,7 +446,7 @@ fun CampScene(
             // Nền đất: vùng sáng cam quanh lửa (lửa tắt thì chỉ còn đất tối).
             val gx = (rx + 85f).dp.toPx()
             val gy = (ry + 45f).dp.toPx()
-            scale(1f, gy / gx, pivot = fire) {
+            if (showFire) scale(1f, gy / gx, pivot = fire) {
                 drawCircle(
                     Brush.radialGradient(
                         listOf(
@@ -501,7 +506,7 @@ fun CampScene(
                 )
             }
         }
-        Campfire(burning, Modifier.size(height * 0.4f).offset(y = height * 0.1f).zIndex(0f))
+        if (showFire) Campfire(burning, Modifier.size(height * 0.4f).offset(y = height * 0.1f).zIndex(0f))
         // Câu "Zô" hiện thành bong bóng ngay trên đầu người nói.
         seats.forEach { seat ->
             val text = said[seat.member.id] ?: return@forEach
