@@ -103,6 +103,7 @@ import java.time.ZoneId
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
+import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -609,6 +610,9 @@ private fun SquareSheet(people: List<Member>, burning: Boolean, onClose: () -> U
     val scope = rememberCoroutineScope()
     val layer = rememberGraphicsLayer()
     var saved by remember { mutableStateOf(false) }
+    val canSwitch = remember(people.size, burning) { canSwitchSquare(context, people.size, burning) }
+    // Hội nhỏ có ảnh vẽ sẵn: lần mở nào cũng chọn ngẫu nhiên một kiểu, chạm ảnh để đổi.
+    var painted by remember { mutableStateOf(Random.nextBoolean()) }
     Box(
         Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.88f)).clickable(onClick = onClose),
         contentAlignment = Alignment.Center,
@@ -619,7 +623,14 @@ private fun SquareSheet(people: List<Member>, burning: Boolean, onClose: () -> U
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            FittedCaveSquare(people, burning, Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)), layer)
+            FittedCaveSquare(
+                people, burning, layer = layer, painted = canSwitch && painted,
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
+                    .clickable(enabled = canSwitch) { painted = !painted; saved = false },
+            )
+            if (canSwitch) {
+                Text("Chạm vào ảnh để đổi kiểu khác", color = Mute, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (canSaveSquare) {
                     GhostButton(

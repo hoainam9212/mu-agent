@@ -90,9 +90,9 @@ class ScreensPreviewTest {
     // Ảnh hang vuông: khung chụp đúng 1080x1080 như ảnh xuất ra.
     private val ten = crew + listOf(Member(6, "Phong"), Member(7, "Quân"), Member(8, "Khoa"), Member(9, "Bình"), Member(10, "Trung"))
 
-    private fun square(people: List<Member>, burning: Boolean) {
+    private fun square(people: List<Member>, burning: Boolean, painted: Boolean = false) {
         paparazzi.unsafeUpdateConfig(deviceConfig = DeviceConfig.PIXEL_5.copy(screenHeight = 1080))
-        shot { FittedCaveSquare(people, burning, Modifier.fillMaxWidth()) }
+        shot { FittedCaveSquare(people, burning, Modifier.fillMaxWidth(), painted = painted) }
     }
 
     @Test fun squareFireBurning() = square(crew, burning = true)
@@ -111,6 +111,11 @@ class ScreensPreviewTest {
     @Test fun squareSevenAsleep() = square(ten.take(7), burning = false)
 
     @Test fun squareEight() = square(ten.take(8), burning = true)
+
+    // Hội nhỏ, kiểu ảnh vẽ sẵn (chạm ảnh để đổi).
+    @Test fun squarePaintedFive() = square(crew, burning = true, painted = true)
+
+    @Test fun squarePaintedTwoAsleep() = square(crew.take(2), burning = false, painted = true)
 
     @Test fun caveSquareSheet() = shot { CaveScreen(cave(fireOn = true), "Hội Tối Cổ Tokyo", 1, NoActions, showSquare = true) }
 }

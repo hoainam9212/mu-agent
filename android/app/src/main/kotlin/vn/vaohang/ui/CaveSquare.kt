@@ -42,7 +42,8 @@ private const val SQUARE_FIRE_Y = 0.62f
 private val SquareScene = 330.dp
 
 // Ảnh Gemini (trong assets/square/): vẽ sẵn cả cảnh (`square_lit_N`, `square_sleep_N`) cho hội đông, khó nhận ra ai với ai.
-// Hội nhỏ thì Gemini chỉ vẽ nền (`square_bg_lit`, `square_bg_out`), app xếp đúng nhân vật của từng người vào.
+// Hội nhỏ thì Gemini chỉ vẽ nền (`square_bg_lit`, `square_bg_out`), app xếp đúng nhân vật của từng người vào;
+// có ảnh vẽ sẵn thì người dùng đổi qua lại được (ảnh vẽ sẵn vui hơn nhưng nhân vật không khớp từng người).
 private const val FULL_SCENE_FROM = 7
 
 // Gốc đống lửa trên ảnh nền vuông (tỉ lệ x, y) và vùng sàn ngồi/nằm được. Đo lại khi có ảnh nền thật.
@@ -55,16 +56,22 @@ private fun squareArt(context: Context, name: String): ImageBitmap? = runCatchin
     context.assets.open("square/$name.webp").use { BitmapFactory.decodeStream(it) }?.asImageBitmap()
 }.getOrNull()
 
+private fun sceneName(n: Int, burning: Boolean) = "square_${if (burning) "lit" else "sleep"}_$n"
+
+/** Hội nhỏ có ảnh vẽ sẵn cả cảnh: cho đổi qua lại giữa ảnh đó và cảnh nhân vật thật. */
+fun canSwitchSquare(context: Context, n: Int, burning: Boolean): Boolean =
+    n < FULL_SCENE_FROM && runCatching { context.assets.open("square/${sceneName(n, burning)}.webp").close() }.isSuccess
+
 /**
  * Cảnh hang vuông để khoe: chỉ những người đang trong hang, không tên, không chữ, không ai được tô sáng.
- * Lửa cháy thì cả hội ngồi quanh lửa; lửa tắt thì cả hội nằm ngủ.
+ * Lửa cháy thì cả hội ngồi quanh lửa; lửa tắt thì cả hội nằm ngủ. [painted]: hội nhỏ cũng dùng ảnh vẽ sẵn nếu có.
  */
 @Composable
-fun CaveSquare(people: List<Member>, burning: Boolean, modifier: Modifier = Modifier) {
+fun CaveSquare(people: List<Member>, burning: Boolean, modifier: Modifier = Modifier, painted: Boolean = false) {
     val context = LocalContext.current
     val n = people.size
-    val scene = remember(n, burning) {
-        if (n >= FULL_SCENE_FROM) squareArt(context, "square_${if (burning) "lit" else "sleep"}_$n") else null
+    val scene = remember(n, burning, painted) {
+        if (n >= FULL_SCENE_FROM || painted) squareArt(context, sceneName(n, burning)) else null
     }
     val bg = remember(burning) { squareArt(context, if (burning) "square_bg_lit" else "square_bg_out") }
     when {
@@ -96,7 +103,9 @@ fun CaveSquare(people: List<Member>, burning: Boolean, modifier: Modifier = Modi
 
 /** [CaveSquare] thu vừa bề ngang chỗ đặt; [layer] (nếu có) ghi lại đúng khung 400dp để xuất ảnh. */
 @Composable
-fun FittedCaveSquare(people: List<Member>, burning: Boolean, modifier: Modifier = Modifier, layer: GraphicsLayer? = null) {
+fun FittedCaveSquare(
+    people: List<Member>, burning: Boolean, modifier: Modifier = Modifier, layer: GraphicsLayer? = null, painted: Boolean = false,
+) {
     BoxWithConstraints(modifier.aspectRatio(1f), contentAlignment = Alignment.Center) {
         val s = maxWidth / SquareSide
         Box(
@@ -109,7 +118,7 @@ fun FittedCaveSquare(people: List<Member>, burning: Boolean, modifier: Modifier 
                     }
                 },
         ) {
-            CaveSquare(people, burning)
+            CaveSquare(people, burning, painted = painted)
         }
     }
 }
