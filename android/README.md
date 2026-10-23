@@ -23,5 +23,5 @@ Trong Settings → Secrets and variables → Actions của repo:
 - secret `GOOGLE_SERVICES_JSON` = nội dung file `google-services.json` → APK nhận được thông báo đẩy;
 - variable `VAOHANG_SERVER_URL` = địa chỉ HTTPS của máy chủ → APK trỏ về máy chủ đó.
 
-Mặc định `vaohang.serverUrl=http://10.0.2.2:8000` (máy chủ chạy trên máy tính, app chạy trên emulator).
+Mặc định `vaohang.serverUrl` trỏ về máy chủ pilot trên Cloud Run; thử với máy chủ trên máy tính + emulator: `-Pvaohang.serverUrl=http://10.0.2.2:8000`.
 Chỉ địa chỉ này và `localhost` được dùng HTTP thường; pilot phải dùng HTTPS.
