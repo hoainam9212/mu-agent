@@ -146,13 +146,13 @@ class NotificationCopyTest {
         7, "Hội", 3, result, "Atlético Madrid 2-0 MU", Instant.EPOCH, inside, names,
     )
 
-    @Test fun outsiderSeesOnlyWhoIsInside() = assertEquals(
-        Copy("Hang mở cửa rồi", "Atlético Madrid 2-0 MU. Tuấn, Hùng và Long đang ngồi bên lửa. Vào Zô một cốc không?"),
+    @Test fun outsiderSeesNoNames() = assertEquals(
+        Copy("Muốn vào hang không?", "Atlético Madrid 2-0 MU. Lửa nhóm rồi, vào thôi anh em!"),
         NotificationCopy.lightsOn(lights(false, listOf("Tuấn", "Hùng", "Long")), deferred = false),
     )
 
     @Test fun morningVersion() = assertEquals(
-        "Đêm qua Atlético Madrid 2-0 MU. Lửa vừa nhóm, chưa ai vào. Bạn vào trước nhé?",
+        "Đêm qua Atlético Madrid 2-0 MU. Lửa nhóm rồi, vào thôi anh em!",
         NotificationCopy.lightsOn(lights(false, emptyList()), deferred = true).body,
     )
 
@@ -160,7 +160,7 @@ class NotificationCopyTest {
         assertEquals("🔥 Hoà rồi, nhóm lửa lại thôi", NotificationCopy.lightsOn(lights(true, emptyList(), "D"), false).title)
 
     @Test fun reminderUsesLocalTime() = assertEquals(
-        "Bóng lăn lúc 03:00. Thức xem cùng anh em, hay ngủ trước để hang báo sau?",
+        "03:00 bóng lăn. Thức xem không bạn?",
         NotificationCopy.reminder(PushMessage.MatchReminder(1, Instant.parse("2026-11-03T20:00:00Z"), "Roma"), VN).body,
     )
 }

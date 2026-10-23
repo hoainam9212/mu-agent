@@ -54,7 +54,7 @@ class ScreenWatchService : Service() {
             .setSmallIcon(R.drawable.ic_stat_vaohang)
             .setColor(Notifications.BRAND_COLOR)
             .setContentTitle("Ngủ ngon nhé 🌙")
-            .setContentText("Đặt máy xuống là xong. Hang chỉ đếm giờ tắt máy, không ghi tên.")
+            .setContentText("Cất máy đi ngủ thôi, mai còn đi làm.")
             .setSilent(true)
             .build()
         val type = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
