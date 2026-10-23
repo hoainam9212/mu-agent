@@ -3,12 +3,14 @@ package vn.vaohang.ui
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.StartOffset
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -39,12 +41,16 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -124,8 +130,6 @@ fun CaveBackdrop(fireOn: Boolean, modifier: Modifier = Modifier, fireY: Float = 
 // ---- Đống lửa ------------------------------------------------------------------------------
 
 private val Stone = Color(0xFF5E5650)
-private val LogBrown = Color(0xFF6B4226)
-private val LogDark = Color(0xFF4A2D1A)
 private val Smoke = Color(0xFF9A948C)
 
 private fun DrawScope.flame(color: Color, cx: Float, base: Float, w: Float, h: Float, sway: Float) {
@@ -138,168 +142,85 @@ private fun DrawScope.flame(color: Color, cx: Float, base: Float, w: Float, h: F
     drawPath(p, color)
 }
 
-/** Lửa trại: cháy thì lửa nhảy, tàn lửa bay; tắt thì lụi dần còn than hồng và khói. */
+/** Lửa trại đất nặn: lửa nhún nhảy, hắt sáng, tàn lửa bay; tắt thì còn than và khói. */
 @Composable
 fun Campfire(burning: Boolean, modifier: Modifier = Modifier) {
     val tr = rememberInfiniteTransition(label = "fire")
     val a by tr.animateFloat(0f, 1f, infiniteRepeatable(tween(520, easing = LinearEasing), RepeatMode.Reverse), label = "a")
-    val b by tr.animateFloat(0f, 1f, infiniteRepeatable(tween(780, easing = LinearEasing), RepeatMode.Reverse), label = "b")
     val t by tr.animateFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing)), label = "t")
     val fire by animateFloatAsState(if (burning) 1f else 0f, tween(2500), label = "fire")
-    Canvas(modifier) {
-        val w = size.width
-        val h = size.height
-        val cx = w / 2
-        val base = h * 0.80f
-        // ánh lửa hắt xuống nền đất
-        drawOval(
-            Brush.radialGradient(listOf(Ember.copy(alpha = 0.5f * fire), Color.Transparent), center = Offset(cx, base), radius = w * 0.5f),
-            topLeft = Offset(cx - w * 0.5f, base - h * 0.12f), size = Size(w, h * 0.24f),
-        )
-        // vòng đá
-        for (i in 0 until 8) {
-            val ang = 2 * PI * i / 8
-            val x = cx + cos(ang).toFloat() * w * 0.33f
-            val y = base + sin(ang).toFloat() * h * 0.06f
-            drawOval(Stone, topLeft = Offset(x - w * 0.06f, y - h * 0.03f), size = Size(w * 0.12f, h * 0.06f))
+    Box(modifier) {
+        Canvas(Modifier.matchParentSize()) {
+            val c = Offset(size.width / 2, size.height * 0.55f)
+            val r = size.width * 0.8f
+            drawCircle(
+                Brush.radialGradient(
+                    listOf(Gold.copy(alpha = 0.45f * fire * (0.8f + 0.2f * a)), Ember.copy(alpha = 0.22f * fire), Color.Transparent),
+                    center = c, radius = r,
+                ),
+                radius = r, center = c,
+            )
         }
-        // củi bắt chéo
-        drawLine(LogBrown, Offset(cx - w * 0.28f, base + h * 0.02f), Offset(cx + w * 0.22f, base - h * 0.08f), w * 0.08f, StrokeCap.Round)
-        drawLine(LogDark, Offset(cx + w * 0.28f, base + h * 0.02f), Offset(cx - w * 0.22f, base - h * 0.08f), w * 0.08f, StrokeCap.Round)
-        // than hồng: luôn âm ỉ, rõ hơn khi lửa đã tắt
-        val glow = (0.45f + 0.55f * (1 - fire)) * (0.6f + 0.4f * a)
-        drawCircle(MuRed.copy(alpha = glow), w * 0.035f, Offset(cx - w * 0.07f, base - h * 0.04f))
-        drawCircle(Ember.copy(alpha = glow), w * 0.028f, Offset(cx + w * 0.05f, base - h * 0.05f))
-        drawCircle(MuRed.copy(alpha = glow * 0.8f), w * 0.022f, Offset(cx + w * 0.01f, base - h * 0.01f))
+        if (fire < 0.99f) {
+            Image(painterResource(R.drawable.fire_out), null, Modifier.matchParentSize(), contentScale = ContentScale.Fit, alpha = 1f - fire)
+        }
         if (fire > 0.01f) {
-            val fb = base - h * 0.04f
-            flame(MuRed, cx, fb, w * 0.42f, h * 0.66f * fire * (0.9f + 0.1f * a), (a - 0.5f) * w * 0.05f)
-            flame(Ember, cx, fb, w * 0.30f, h * 0.50f * fire * (0.86f + 0.14f * b), (b - 0.5f) * w * 0.07f)
-            flame(Gold, cx, fb, w * 0.16f, h * 0.30f * fire * (0.82f + 0.18f * a), (0.5f - b) * w * 0.05f)
-            for (i in 0 until 5) {
-                val p = (t + i * 0.2f) % 1f
-                val x = cx + sin((p * 3 + i) * 2 * PI).toFloat() * w * 0.12f
-                val y = base - h * 0.35f - p * h * 0.55f
-                drawCircle(Gold.copy(alpha = (1 - p) * fire), w * 0.012f * (1 + i % 2), Offset(x, y))
-            }
+            Image(
+                painterResource(R.drawable.fire_burning), null, contentScale = ContentScale.Fit, alpha = fire,
+                modifier = Modifier.matchParentSize().graphicsLayer {
+                    // lửa nhún lên xuống quanh gốc củi
+                    scaleY = 1f + 0.04f * (a - 0.5f)
+                    scaleX = 1f - 0.02f * (a - 0.5f)
+                    transformOrigin = TransformOrigin(0.5f, 0.8f)
+                },
+            )
         }
-        val smoke = 1f - fire
-        if (smoke > 0.01f) {
-            for (i in 0 until 4) {
-                val p = (t + i * 0.25f) % 1f
-                val x = cx + sin((p * 2 + i) * PI).toFloat() * w * 0.08f
-                drawCircle(Smoke.copy(alpha = 0.28f * (1 - p) * smoke), w * (0.05f + p * 0.12f), Offset(x, base - h * 0.15f - p * h * 0.7f))
+        Canvas(Modifier.matchParentSize()) {
+            val w = size.width
+            val h = size.height
+            val cx = w / 2
+            val base = h * 0.62f
+            if (fire > 0.01f) {
+                for (i in 0 until 6) {
+                    val p = (t + i / 6f) % 1f
+                    val x = cx + sin((p * 3 + i) * 2 * PI).toFloat() * w * 0.14f
+                    val y = base - h * 0.25f - p * h * 0.55f
+                    drawCircle(Gold.copy(alpha = (1 - p) * fire), w * 0.012f * (1 + i % 2), Offset(x, y))
+                }
+            }
+            val smoke = 1f - fire
+            if (smoke > 0.01f) {
+                for (i in 0 until 4) {
+                    val p = (t + i * 0.25f) % 1f
+                    val x = cx + sin((p * 2 + i) * PI).toFloat() * w * 0.08f
+                    drawCircle(Smoke.copy(alpha = 0.25f * (1 - p) * smoke), w * (0.05f + p * 0.12f), Offset(x, base - h * 0.1f - p * h * 0.6f))
+                }
             }
         }
     }
 }
 
-// ---- Người tối cổ mặc áo MU ------------------------------------------------------------------
+// ---- Người tối cổ mặc áo MU (đất nặn) ----------------------------------------------------------
 
-private val Skins = listOf(Color(0xFFF1C27D), Color(0xFFE0AC69), Color(0xFFC68642), Color(0xFFFFDBAC), Color(0xFFD4A373))
-private val Hairs = listOf(Color(0xFF2B1B10), Color(0xFF4A2C17), Color(0xFF1A1A1A), Color(0xFF6B3E1F), Color(0xFF3B2A20))
-private val Pelt = Color(0xFFD9A066)
-private val PeltSpot = Color(0xFF5A3A1E)
-private val Bone = Color(0xFFF2EBDD)
+// 6 kiểu nhân vật, mỗi kiểu 3 tư thế. Mỗi người luôn giữ một kiểu (theo id).
+private val SitSprites = intArrayOf(
+    R.drawable.caveman_0_sit, R.drawable.caveman_1_sit, R.drawable.caveman_2_sit,
+    R.drawable.caveman_3_sit, R.drawable.caveman_4_sit, R.drawable.caveman_5_sit,
+)
+private val SleepSprites = intArrayOf(
+    R.drawable.caveman_0_sleep, R.drawable.caveman_1_sleep, R.drawable.caveman_2_sleep,
+    R.drawable.caveman_3_sleep, R.drawable.caveman_4_sleep, R.drawable.caveman_5_sleep,
+)
+private val CheerSprites = intArrayOf(
+    R.drawable.caveman_0_cheer, R.drawable.caveman_1_cheer, R.drawable.caveman_2_cheer,
+    R.drawable.caveman_3_cheer, R.drawable.caveman_4_cheer, R.drawable.caveman_5_cheer,
+)
 
-private fun pick(seed: Long, salt: Int, n: Int) = Math.floorMod(seed * 31 + salt, n.toLong()).toInt()
-
-private fun DrawScope.drawCaveman(seed: Long, me: Boolean, asleep: Boolean, cheer: Boolean) {
-    val w = size.width
-    val h = size.height
-    val skin = Skins[pick(seed, 1, Skins.size)]
-    val hair = Hairs[pick(seed, 2, Hairs.size)]
-    val beard = pick(seed, 3, 3) != 0
-    val prop = if (cheer) -1 else pick(seed, 4, 3) // 0: xương, 1: gậy, 2: hơ tay
-    if (me) drawCircle(Gold.copy(alpha = 0.30f), w * 0.5f, Offset(w / 2, h * 0.55f))
-    // chân xếp bằng + khố da báo
-    drawOval(skin, topLeft = Offset(w * 0.08f, h * 0.82f), size = Size(w * 0.45f, h * 0.15f))
-    drawOval(skin, topLeft = Offset(w * 0.47f, h * 0.82f), size = Size(w * 0.45f, h * 0.15f))
-    drawOval(Pelt, topLeft = Offset(w * 0.16f, h * 0.72f), size = Size(w * 0.68f, h * 0.17f))
-    drawCircle(PeltSpot, w * 0.03f, Offset(w * 0.32f, h * 0.80f))
-    drawCircle(PeltSpot, w * 0.025f, Offset(w * 0.52f, h * 0.77f))
-    drawCircle(PeltSpot, w * 0.03f, Offset(w * 0.68f, h * 0.82f))
-    // áo đỏ MU, cổ trắng
-    val shirt = Path().apply {
-        moveTo(w * 0.27f, h * 0.46f)
-        lineTo(w * 0.73f, h * 0.46f)
-        lineTo(w * 0.84f, h * 0.78f)
-        quadraticBezierTo(w * 0.5f, h * 0.84f, w * 0.16f, h * 0.78f)
-        close()
-    }
-    drawPath(shirt, MuRed)
-    drawCircle(MuRed, w * 0.11f, Offset(w * 0.25f, h * 0.52f))
-    drawCircle(MuRed, w * 0.11f, Offset(w * 0.75f, h * 0.52f))
-    val collar = Path().apply {
-        moveTo(w * 0.39f, h * 0.46f)
-        lineTo(w * 0.5f, h * 0.55f)
-        lineTo(w * 0.61f, h * 0.46f)
-    }
-    drawPath(collar, Color.White, style = Stroke(width = w * 0.035f, cap = StrokeCap.Round))
-    // tay
-    val arm = w * 0.09f
-    if (cheer) {
-        drawLine(skin, Offset(w * 0.22f, h * 0.52f), Offset(w * 0.08f, h * 0.18f), arm, StrokeCap.Round)
-        drawLine(skin, Offset(w * 0.78f, h * 0.52f), Offset(w * 0.92f, h * 0.18f), arm, StrokeCap.Round)
-    } else {
-        drawLine(skin, Offset(w * 0.22f, h * 0.56f), Offset(w * 0.20f, h * 0.78f), arm, StrokeCap.Round)
-        drawLine(skin, Offset(w * 0.78f, h * 0.56f), Offset(w * 0.80f, h * 0.78f), arm, StrokeCap.Round)
-    }
-    when (prop) {
-        0 -> {
-            val from = Offset(w * 0.82f, h * 0.80f)
-            val to = Offset(w * 0.95f, h * 0.56f)
-            drawLine(Bone, from, to, w * 0.05f, StrokeCap.Round)
-            for (end in listOf(from, to)) {
-                drawCircle(Bone, w * 0.035f, end + Offset(-w * 0.025f, 0f))
-                drawCircle(Bone, w * 0.035f, end + Offset(w * 0.025f, 0f))
-            }
-        }
-        1 -> {
-            drawLine(LogBrown, Offset(w * 0.84f, h * 0.82f), Offset(w * 0.95f, h * 0.52f), w * 0.06f, StrokeCap.Round)
-            drawCircle(LogBrown, w * 0.075f, Offset(w * 0.95f, h * 0.49f))
-        }
-    }
-    // đầu: tóc bù xù, lông mày rậm, râu
-    val hc = Offset(w * 0.5f, h * 0.30f)
-    val hr = w * 0.21f
-    drawCircle(hair, hr * 1.12f, hc + Offset(0f, -hr * 0.12f))
-    drawCircle(skin, hr, hc)
-    val left = hc.x - hr * 1.05f
-    val seg = hr * 2.1f / 6
-    val spikes = Path().apply {
-        moveTo(left, hc.y - hr * 0.2f)
-        for (i in 0 until 6) {
-            lineTo(left + (i + 0.5f) * seg, hc.y - hr * (1.25f + (i % 2) * 0.22f))
-            lineTo(left + (i + 1) * seg, hc.y - hr * 0.55f)
-        }
-        lineTo(hc.x + hr * 1.05f, hc.y - hr * 0.2f)
-        close()
-    }
-    drawPath(spikes, hair)
-    drawLine(hair, Offset(hc.x - hr * 0.6f, hc.y - hr * 0.2f), Offset(hc.x + hr * 0.6f, hc.y - hr * 0.2f), hr * 0.22f, StrokeCap.Round)
-    if (asleep) {
-        drawLine(CaveBlack, Offset(hc.x - hr * 0.42f, hc.y + hr * 0.08f), Offset(hc.x - hr * 0.18f, hc.y + hr * 0.08f), hr * 0.08f, StrokeCap.Round)
-        drawLine(CaveBlack, Offset(hc.x + hr * 0.18f, hc.y + hr * 0.08f), Offset(hc.x + hr * 0.42f, hc.y + hr * 0.08f), hr * 0.08f, StrokeCap.Round)
-    } else {
-        drawCircle(CaveBlack, hr * 0.11f, hc + Offset(-hr * 0.3f, hr * 0.06f))
-        drawCircle(CaveBlack, hr * 0.11f, hc + Offset(hr * 0.3f, hr * 0.06f))
-    }
-    drawCircle(Color.Black.copy(alpha = 0.15f), hr * 0.17f, hc + Offset(0f, hr * 0.28f))
-    if (beard) {
-        drawArc(hair, 15f, 150f, true, topLeft = Offset(hc.x - hr, hc.y - hr * 0.55f), size = Size(hr * 2, hr * 1.9f))
-    }
-    val mouthY = hc.y + hr * 0.58f
-    drawArc(
-        if (beard) skin else CaveBlack, 20f, 140f, false,
-        topLeft = Offset(hc.x - hr * 0.3f, mouthY - hr * 0.25f), size = Size(hr * 0.6f, hr * 0.3f),
-        style = Stroke(width = hr * 0.09f, cap = StrokeCap.Round),
-    )
-}
+fun cavemanVariant(seed: Long): Int = Math.floorMod(seed, SitSprites.size.toLong()).toInt()
 
 /**
- * Một anh em trong hang: người tối cổ mặc áo đỏ MU, chữ cái đầu của tên in trên áo.
- * [asleep] khi lửa tắt (nhắm mắt, 💤); [cheer] giơ tay ăn mừng.
+ * Một anh em trong hang: người tối cổ đất nặn mặc áo đỏ MU, thở nhẹ.
+ * [asleep] khi lửa tắt (nằm ngủ); [cheer] nhảy mừng; [me] có vầng sáng vàng dưới chân.
  */
 @Composable
 fun Caveman(
@@ -312,16 +233,42 @@ fun Caveman(
     cheer: Boolean = false,
     showName: Boolean = true,
 ) {
-    val height = width * 1.2f
+    val v = cavemanVariant(seed)
+    val sprite = when {
+        cheer -> CheerSprites[v]
+        asleep -> SleepSprites[v]
+        else -> SitSprites[v]
+    }
+    val height = width * 1.3f
+    val breathe by rememberInfiniteTransition(label = "breathe").animateFloat(
+        0f, 1f,
+        infiniteRepeatable(
+            tween(if (asleep) 2600 else 1700, easing = FastOutSlowInEasing), RepeatMode.Reverse,
+            initialStartOffset = StartOffset(v * 290),
+        ),
+        label = "b",
+    )
     Column(modifier.width(width + 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(width, height)) {
-            Canvas(Modifier.fillMaxSize().alpha(if (asleep) 0.7f else 1f)) { drawCaveman(seed, me, asleep, cheer) }
-            Text(
-                name.trim().take(1).uppercase(),
-                color = Color.White, fontWeight = FontWeight.Black, fontSize = (width.value * 0.16f).sp,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = height * 0.56f),
+        Box(Modifier.size(width + 16.dp, height), contentAlignment = Alignment.BottomCenter) {
+            if (me) {
+                Canvas(Modifier.matchParentSize()) {
+                    val c = Offset(size.width / 2, size.height * 0.94f)
+                    scale(1f, 0.32f, pivot = c) {
+                        drawCircle(
+                            Brush.radialGradient(listOf(Gold.copy(alpha = 0.9f), Gold.copy(alpha = 0.35f), Color.Transparent), center = c, radius = size.width * 0.62f),
+                            radius = size.width * 0.62f, center = c,
+                        )
+                    }
+                }
+            }
+            Image(
+                painterResource(sprite), contentDescription = name, contentScale = ContentScale.Fit, alignment = Alignment.BottomCenter,
+                modifier = Modifier.fillMaxSize().graphicsLayer {
+                    scaleY = 1f + 0.025f * breathe
+                    scaleX = 1f - 0.01f * breathe
+                    transformOrigin = TransformOrigin(0.5f, 1f)
+                },
             )
-            if (asleep) Text("💤", fontSize = (width.value * 0.22f).sp, modifier = Modifier.align(Alignment.TopEnd))
         }
         if (showName) {
             Text(
@@ -353,9 +300,9 @@ fun CampScene(
     val start = -PI / 2 + if (n % 2 == 0 && n > 0) PI / n else 0.0
     // Đông người thì nhân vật nhỏ lại và vòng ngồi rộng ra (tối đa 10 người một hội).
     val avatar = when {
-        n <= 5 -> 64.dp
-        n <= 7 -> 54.dp
-        else -> 46.dp
+        n <= 5 -> 70.dp
+        n <= 7 -> 60.dp
+        else -> 50.dp
     }
     val rx = if (n <= 6) 118.0 else 132.0
     val ry = height.value * (if (n <= 6) 0.27 else 0.31)
@@ -382,10 +329,15 @@ fun CampScene(
                     radius = gx, center = fire,
                 )
             }
+            // Bóng tiếp đất ngay dưới mỗi người.
+            seats.forEach { (_, x, y) ->
+                val feet = center + Offset(x.dp.toPx(), (y + avatar.value * 0.6f).dp.toPx())
+                scale(1f, 0.3f, pivot = feet) { drawCircle(Color.Black.copy(alpha = 0.4f), avatar.toPx() * 0.5f, feet) }
+            }
             // Bóng đổ dài ra xa đống lửa.
             if (lit > 0.01f) {
                 seats.forEach { (_, x, y) ->
-                    val feet = center + Offset(x.dp.toPx(), (y + avatar.value * 0.45f).dp.toPx())
+                    val feet = center + Offset(x.dp.toPx(), (y + avatar.value * 0.6f).dp.toPx())
                     val dir = feet - fire
                     val u = dir / dir.getDistance().coerceAtLeast(1f)
                     val perp = Offset(-u.y, u.x)
