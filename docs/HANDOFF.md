@@ -39,6 +39,39 @@ select 'member', u.id::text || ' ' || u.nickname, gm.status, 'fcm_len=' || coale
   from group_members gm join users u on u.id = gm.user_id where gm.group_id = 3;
 ```
 
+## Sổ tay ngắn: làm gì ở đâu
+
+### Cloud Shell (console.cloud.google.com → nút `>_` góc trên phải)
+| Việc | Lệnh |
+|---|---|
+| Nạp token + địa chỉ (đầu mỗi lần mở) | 3 dòng đầu ở mục "Lệnh cho người trực" phía trên |
+| Hội thử bật/tắt | `curl -s -H "$H" -H 'content-type: application/json' -X POST $API/v1/admin/groups/<id>/demo -d '{"is_demo":true}'` (`false` để về hội thật) |
+| Trận giả lập | `... /v1/admin/replay -d '{"scenario":"<tên>","speed":95}'` → khoảng 1–2 phút sau có kết quả |
+| Xử lý ngay, không chờ 1 phút | `curl -s -H "$H" -X POST $API/v1/admin/tick` |
+| Xem tình trạng | `curl -s -H "$H" $API/v1/admin/status` (lịch, lỗi nguồn dữ liệu, số hang mở) |
+| Lấy lịch MU ngay | `curl -s -H "$H" -X POST $API/v1/admin/schedule/refresh` |
+| Nhập kết quả tay khi API lỗi | `curl -s -H "$H" -H 'content-type: application/json' -X POST $API/v1/admin/fixtures/<id>/result -d '{"mu_goals":1,"opp_goals":2}'` |
+| Xem log lỗi 30 phút gần nhất | `gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="vaohang" AND severity>=WARNING' --limit 10 --freshness 30m --format='value(timestamp,textPayload)'` |
+| Lịch gọi tick có chạy không | `gcloud scheduler jobs describe vaohang-tick --location asia-northeast1 --format='value(state,lastAttemptTime,status)'` |
+| Cập nhật máy chủ theo code mới | `cd ~/mu-agent && git pull && bash deploy/cloudrun.sh` (hỏi lại chuỗi DB + token football-data, **sinh ADMIN_TOKEN mới**) |
+
+### Supabase (supabase.com → project → SQL Editor)
+- Kiểm tra hội / trận / hang / thành viên: câu SQL ở trên (đổi `group_id = 3` nếu cần).
+- Danh sách hội: `select id, name, is_demo from groups order by id desc;`
+- Chuỗi kết nối cho script deploy: nút **Connect** → **Session pooler**, thay `[YOUR-PASSWORD]` bằng mật khẩu DB.
+  Quên mật khẩu: Project Settings → Database → Reset database password (rồi chạy lại deploy).
+- Chỉ đọc là chính. Đổi dữ liệu thì dùng lệnh admin ở Cloud Shell, không sửa bảng tay.
+
+### Firebase (console.firebase.google.com)
+- Thường **không cần làm gì**: máy chủ gửi thông báo bằng tài khoản `vaohang-run` (quyền FCM do script deploy gắn).
+- APK không nhận được thông báo nào (kể cả khi màn hình sáng): kiểm tra secret `GOOGLE_SERVICES_JSON` trong
+  GitHub → Settings → Secrets and variables → Actions. File lấy ở Firebase → Project settings → app Android
+  `com.vnext.muagent` → tải `google-services.json`. Đổi secret xong thì build lại APK.
+- Mã nhận thông báo của từng máy: SQL `fcm_len` > 0 là app đã gửi lên máy chủ.
+
+### GitHub (APK)
+- Actions → workflow **CI** → lần chạy mới nhất của nhánh → Artifacts → `vaohang-debug-apk`.
+
 ## Cách làm việc với chủ dự án
 - Câu chữ hiển thị cho người dùng (thông báo, nút, màn hình): **đưa bảng cũ → mới để duyệt trước**, chỉ commit/đẩy sau khi đồng ý.
 - Không bảo chủ dự án dán token/bí mật vào chat. Phiên cloud không có quyền gcloud hay token admin:
