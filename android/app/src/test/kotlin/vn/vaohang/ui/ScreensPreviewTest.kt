@@ -105,5 +105,12 @@ class ScreensPreviewTest {
 
     @Test fun squareSmall() = square(crew.take(2), burning = true)
 
+    // Hội 7+ dùng ảnh Gemini vẽ sẵn cả cảnh (assets/square/).
+    @Test fun squareSeven() = square(ten.take(7), burning = true)
+
+    @Test fun squareSevenAsleep() = square(ten.take(7), burning = false)
+
+    @Test fun squareEight() = square(ten.take(8), burning = true)
+
     @Test fun caveSquareSheet() = shot { CaveScreen(cave(fireOn = true), "Hội Tối Cổ Tokyo", 1, NoActions, showSquare = true) }
 }

@@ -8,6 +8,7 @@ from PIL import Image
 ORDER = [
     "onboarding", "home", "caveFireBurning", "caveFireOut", "caveNotInside", "celebrate", "caveFullCrew",
     "caveSquareSheet", "squareFireBurning", "squareFireOut", "squareFullCrew", "squareFullCrewAsleep", "squareSmall",
+    "squareSeven", "squareSevenAsleep", "squareEight",
 ]
 WIDTH = 540
 
