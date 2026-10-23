@@ -14,6 +14,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -73,9 +74,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -87,6 +91,7 @@ import vn.vaohang.GroupDto
 import vn.vaohang.MatchDto
 import vn.vaohang.Member
 import vn.vaohang.PresenceProbe
+import vn.vaohang.R
 import vn.vaohang.VaoHangApp
 import vn.vaohang.core.LightsOut
 import java.time.Duration
@@ -674,25 +679,37 @@ fun CelebrateScreen(onDone: () -> Unit) {
     val t by rememberInfiniteTransition(label = "jump").animateFloat(
         0f, 1f, infiniteRepeatable(tween(1100, easing = LinearEasing)), label = "t",
     )
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MuRed, Ember, Gold)))) {
+    // Lối ra hang ngập nắng; cả hội nhảy mừng ở cửa hang.
+    Box(Modifier.fillMaxSize().background(CaveBlack)) {
+        Image(
+            painterResource(R.drawable.cave_exit), contentDescription = null, contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter, modifier = Modifier.fillMaxSize(),
+        )
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.12f), Color.Transparent, Color.Black.copy(alpha = 0.6f))),
+            ),
+        )
         Confetti(Modifier.fillMaxSize())
         Column(
             Modifier.fillMaxSize().systemBarsPadding().padding(24.dp),
-            verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Bottom, horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                listOf(-21L, -22L, -23L).forEachIndexed { i, seed ->
-                    val jump = abs(sin((t + i * 0.3f) * PI)).toFloat() * 28f
-                    Caveman("MU", seed, width = 76.dp, cheer = true, showName = false, modifier = Modifier.offset(y = (-jump).dp))
+            Row {
+                listOf(-21L, -22L, -23L, -24L).forEachIndexed { i, seed ->
+                    val jump = abs(sin((t + i * 0.27f) * PI)).toFloat() * 30f
+                    Caveman("MU", seed, width = 64.dp, cheer = true, showName = false, modifier = Modifier.offset(y = (-jump).dp))
                 }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(28.dp))
             Text(
                 "RA KHỎI HANG!", color = Color.White, fontSize = 48.sp, fontFamily = DisplayFont, fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center, modifier = Modifier.scale(pop),
+                style = androidx.compose.ui.text.TextStyle(shadow = Shadow(Color.Black.copy(alpha = 0.6f), Offset(0f, 4f), 14f)),
             )
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(20.dp))
             ClayButton("🎉  Ăn mừng", onDone, Color.White, MuRed)
+            Spacer(Modifier.height(24.dp))
         }
     }
 }

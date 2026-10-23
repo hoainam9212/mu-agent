@@ -71,19 +71,18 @@ import kotlin.random.Random
 // ---- Nền hang ------------------------------------------------------------------------------
 
 // Vị trí vệt sáng trên ảnh nền (đo từ ảnh): đống lửa đặt đúng chỗ này.
-private const val GLOW_X = 0.524f
-private const val GLOW_Y = 0.755f
-private val FloorLit = Color(0xFF34261C)
-private val FloorDark = Color(0xFF181D22)
+private const val GLOW_X = 0.5f
+private const val GLOW_Y = 0.685f
+private val FloorLit = Color(0xFF221717)
+private val FloorDark = Color(0xFF0E0E15)
 
-private const val CAVE_W = 1116f
-private const val CAVE_H = 2000f
+private const val CAVE_W = 1536f
+private const val CAVE_H = 2752f
 
 // Vùng nền đất ngồi/nằm được trên ảnh hang (tỉ lệ x, y theo ảnh), đo bằng lưới trên ảnh;
 // ngoài vùng này là vách hang và măng đá. Đáy kéo quá 1 vì phần dưới ảnh được tô tiếp màu nền đất.
 private val FLOOR = floatArrayOf(
-    0.47f, 0.58f, 0.76f, 0.58f, 0.76f, 0.66f, 0.90f, 0.72f, 0.80f, 0.76f, 0.76f, 0.88f,
-    0.80f, 1.3f, 0.30f, 1.3f, 0.28f, 0.86f, 0.10f, 0.76f, 0.13f, 0.69f, 0.45f, 0.67f,
+    0.12f, 0.54f, 0.88f, 0.54f, 0.95f, 0.60f, 0.97f, 1.3f, 0.03f, 1.3f, 0.05f, 0.60f,
 )
 
 private fun inPolygon(x: Float, y: Float, p: FloatArray): Boolean {
@@ -234,9 +233,14 @@ fun Campfire(burning: Boolean, modifier: Modifier = Modifier) {
     }
 }
 
-// ---- Người tối cổ mặc áo MU (đất nặn) ----------------------------------------------------------
+// ---- Người tối cổ mặc áo MU (chibi 2D) ----------------------------------------------------------
 
-// 6 kiểu nhân vật, mỗi kiểu 3 tư thế. Mỗi người luôn giữ một kiểu (theo id).
+// 6 kiểu nhân vật, mỗi kiểu 4 tư thế (ngồi, vỗ vai, ngủ nằm, nhảy mừng). Mỗi người luôn giữ một kiểu (theo id).
+// Ảnh vỗ vai: tay với sang trái người xem (kiểu 0 Gemini vẽ ngồi, dùng như ảnh ngồi).
+private val PatSprites = intArrayOf(
+    R.drawable.caveman_0_pat, R.drawable.caveman_1_pat, R.drawable.caveman_2_pat,
+    R.drawable.caveman_3_pat, R.drawable.caveman_4_pat, R.drawable.caveman_5_pat,
+)
 private val SitSprites = intArrayOf(
     R.drawable.caveman_0_sit, R.drawable.caveman_1_sit, R.drawable.caveman_2_sit,
     R.drawable.caveman_3_sit, R.drawable.caveman_4_sit, R.drawable.caveman_5_sit,
@@ -252,18 +256,19 @@ private val CheerSprites = intArrayOf(
 
 fun cavemanVariant(seed: Long): Int = Math.floorMod(seed, SitSprites.size.toLong()).toInt()
 
-// Kiểu 0, 1, 3, 5 ngủ nằm co trên đất (ảnh nằm ngang); kiểu 2, 4 ngủ gật ngồi.
-private val LyingWhenAsleep = setOf(0, 1, 3, 5)
+// Bộ chibi: cả 6 kiểu đều ngủ nằm ngang trên đất.
+private val LyingWhenAsleep = setOf(0, 1, 2, 3, 4, 5)
 
 private fun lying(seed: Long, asleep: Boolean) = asleep && cavemanVariant(seed) in LyingWhenAsleep
 
 /** Kích thước khung vẽ một nhân vật (không kể tên), để đặt chân đúng chỗ trên nền. */
 fun cavemanBox(seed: Long, width: Dp, asleep: Boolean): Pair<Dp, Dp> =
-    if (lying(seed, asleep)) (width * 1.5f) to (width * 0.9f) else (width + 16.dp) to (width * 1.3f)
+    if (lying(seed, asleep)) (width * 1.8f) to (width * 0.9f) else (width + 16.dp) to (width * 1.3f)
 
 /**
- * Một anh em trong hang: người tối cổ đất nặn mặc áo đỏ MU, thở nhẹ.
- * [asleep] khi lửa tắt (nằm ngủ); [cheer] nhảy mừng; [me] có vầng sáng vàng dưới chân.
+ * Một anh em trong hang: người tối cổ chibi mặc áo đỏ MU, thở nhẹ.
+ * [asleep] khi lửa tắt (nằm ngủ); [cheer] nhảy mừng; [patting] vừa vỗ vai ai đó ([flip] lật để tay chỉ sang phải);
+ * [me] có vầng sáng vàng dưới chân.
  */
 @Composable
 fun Caveman(
@@ -275,11 +280,14 @@ fun Caveman(
     asleep: Boolean = false,
     cheer: Boolean = false,
     showName: Boolean = true,
+    patting: Boolean = false,
+    flip: Boolean = false,
 ) {
     val v = cavemanVariant(seed)
     val sprite = when {
         cheer -> CheerSprites[v]
         asleep -> SleepSprites[v]
+        patting -> PatSprites[v]
         else -> SitSprites[v]
     }
     val (boxW, boxH) = cavemanBox(seed, width, asleep)
@@ -310,7 +318,7 @@ fun Caveman(
                 painterResource(sprite), contentDescription = name, contentScale = ContentScale.Fit, alignment = Alignment.BottomCenter,
                 modifier = Modifier.fillMaxSize().graphicsLayer {
                     scaleY = 1f + 0.025f * breathe
-                    scaleX = 1f - 0.01f * breathe
+                    scaleX = (1f - 0.01f * breathe) * if (flip) -1f else 1f
                     transformOrigin = TransformOrigin(0.5f, 1f)
                 },
             )
@@ -445,8 +453,10 @@ fun CampScene(
         }
         seats.forEach { seat ->
             // Không hiện tên quanh lửa: hang đông thì tên đè nhau. Bạn có vầng sáng vàng.
+            // Người vừa vỗ vai: tư thế với tay, lật về phía giữa vòng (tay trong ảnh chỉ sang trái).
             Caveman(
                 seat.member.nickname, seat.member.id, width = seat.width.dp, me = seat.member.id == meId, asleep = !burning, showName = false,
+                patting = burning && seat.member.id in said, flip = seat.x < 0f,
                 modifier = Modifier.offset(seat.x.dp, seat.centerY.dp).zIndex(seat.depth).graphicsLayer { rotationZ = seat.tilt },
             )
         }

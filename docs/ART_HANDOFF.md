@@ -134,6 +134,9 @@ Bộ đất nặn đã có trong app (nền sáng/tối, lửa, 6 nhân vật ×
 
 ## 8. Phần ghép vào app (phiên Claude Code làm, ghi lại để không phải dò lại)
 
+**Trạng thái (23/10):** bộ chibi trong `art/incoming/chibi/` đã ghép vào app (thay bộ đất nặn). Nền 1536×2752,
+vệt sáng lửa ở (0.50, 0.685); nền đất từ y ≈ 0.54. Ảnh vỗ vai: tay chỉ sang trái người xem, ô số 0 Gemini vẽ ngồi.
+
 - Tách nền: `python3 -I android/tools/art/keyout.py sheet art/incoming/chibi/chars_sit.png sit --cols 3 --rows 2 --out android/app/src/main/res/drawable-nodpi`
   (tương tự `pat`, `sleep`, `cheer`; `fire fire_burning.png fire_out.png`; `bg bg_lit.png bg_dark.png bg_exit.png`).
   Bộ đất nặn cũ dùng lưới `--cols 2 --rows 3`.
