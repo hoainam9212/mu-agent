@@ -267,8 +267,8 @@ fun OnboardingScreen(busy: Boolean, onDone: (String, Boolean, Boolean) -> Unit) 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 RuleBadge("🤝", "Chỉ anh em", Modifier.weight(1f))
                 RuleBadge("🤐", "Không chat", Modifier.weight(1f))
-                RuleBadge("📵", "Không chụp màn hình", Modifier.weight(1f))
-                RuleBadge("🙅", "Không chê ai", Modifier.weight(1f))
+                RuleBadge("📵", "Không chụp", Modifier.weight(1f))
+                RuleBadge("🙅", "Không chê", Modifier.weight(1f))
             }
             ConsentRow("😴 Đo giấc ngủ ẩn danh", "50 phút sau trận", measure) { measure = it }
             ConsentRow("💼 Đi làm 8:00–18:00", "Giờ đó để tối báo", daytimeWork) { daytimeWork = it }
@@ -301,7 +301,7 @@ private fun NextMatchCard(m: MatchDto) {
             .background(Brush.linearGradient(listOf(RedDeep, MuRed)))
             .padding(20.dp),
     ) {
-        Text("⚽", fontSize = 72.sp, modifier = Modifier.align(Alignment.TopEnd).alpha(0.18f))
+        Text("⚽", fontSize = 96.sp, modifier = Modifier.align(Alignment.CenterEnd).offset(x = 36.dp).alpha(0.10f))
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Kicker("TRẬN TỚI", Color.White.copy(alpha = 0.8f))
@@ -492,6 +492,7 @@ private fun PatChoice(text: String, onClick: () -> Unit) {
     }
 }
 
+/** Lửa tắt: chỉ hiện giờ báo thức nếu có (nhân vật đã ngủ 💤, không cần thêm chữ). */
 @Composable
 private fun FireOutPanel() {
     val context = LocalContext.current
@@ -499,12 +500,14 @@ private fun FireOutPanel() {
         val app = context.applicationContext as? VaoHangApp
         app?.let { LightsOut.text(Instant.now(), PresenceProbe(context, it.prefs).nextAlarm(), ZoneId.systemDefault()) }
     }
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Rock.copy(alpha = 0.85f)).padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp),
+    alarm ?: return
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Rock.copy(alpha = 0.85f)).padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("💤", fontSize = 40.sp)
-        alarm?.let { Body(it, Gold, align = TextAlign.Center) }
+        Text("⏰", fontSize = 30.sp)
+        Spacer(Modifier.width(14.dp))
+        Body(alarm, Gold)
     }
 }
 
@@ -565,7 +568,7 @@ fun CelebrateScreen(onDone: () -> Unit) {
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
     val pop by animateFloatAsState(
-        if (shown) 1f else 0.3f, spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessLow), label = "pop",
+        if (shown) 1f else 0.6f, spring(dampingRatio = 0.4f, stiffness = Spring.StiffnessLow), label = "pop",
     )
     val t by rememberInfiniteTransition(label = "jump").animateFloat(
         0f, 1f, infiniteRepeatable(tween(1100, easing = LinearEasing)), label = "t",

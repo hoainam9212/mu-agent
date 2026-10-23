@@ -317,7 +317,8 @@ fun Caveman(
 fun CampScene(people: List<Member>, meId: Long, burning: Boolean, modifier: Modifier = Modifier, height: Dp = 330.dp) {
     Box(modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
         val n = people.size
-        val start = if (n == 2) PI else -PI / 2
+        // Số người chẵn thì xoay nửa bước, để không ai ngồi chắn ngay trước đống lửa.
+        val start = -PI / 2 + if (n % 2 == 0 && n > 0) PI / n else 0.0
         val rx = 118.0
         val ry = height.value * 0.27
         people.forEachIndexed { i, m ->
