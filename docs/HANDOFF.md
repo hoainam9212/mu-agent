@@ -1,4 +1,4 @@
-# Bàn giao giữa các phiên (cập nhật 23/10/2026)
+# Bàn giao giữa các phiên (cập nhật 23/10/2026, đêm)
 
 ## Tình trạng
 - App và máy chủ chạy được. Icon mới (người tối cổ nâng cốc "Zô") và icon thông báo đã đồng bộ.
@@ -15,11 +15,34 @@
 - Trận thật kế tiếp sau đó: MU–Roma 3/11/2026 20:00 GMT (pilot).
 - Sau pilot (từ 5/11): bản web cho anh em iPhone, kế hoạch ở `docs/PLAN.md` §9.
 
-## Đang làm (23/10 tối): ảnh hang vuông để chia sẻ
-- Code đã xong (nút "📸 Ảnh hang", xem trước, lưu / chia sẻ; `ui/CaveSquare.kt`), cảnh ghép từ lớp; đã sửa vòng ngồi và bóng.
-  Các commit đều `[skip ci]`: **chưa build APK**, chủ dự án muốn duyệt ảnh trước.
-- Chủ dự án chọn: **ngủ theo cả hội** (lửa tắt = cả hội ngủ), và muốn ảnh vuông **do Gemini vẽ**: 20 ảnh, xem `docs/ART_HANDOFF.md` mục 10.
-- Chưa chốt: chữ trên nút ("📸 Ảnh hang", "⬇ Lưu vào máy" / "✓ Đã lưu", "📤 Chia sẻ").
+## Đang làm (23/10 đêm): ảnh hang vuông để chia sẻ — dừng ở đây, chờ chủ dự án
+**Xong (đã đẩy, commit cuối `38a0b5b`, đều `[skip ci]`):**
+- Nút "📸 Ảnh hang" trên màn hang (chỉ khi đang trong hang) → màn xem trước ảnh vuông 1080×1080, nút "⬇ Lưu vào máy"
+  (Android 10+, thư mục Ảnh/Vào Hang) và "📤 Chia sẻ" (bảng chia sẻ Android). Không tên, không chữ; màn hang vẫn FLAG_SECURE.
+- Lửa cháy = cả hội ngồi quanh lửa; lửa tắt = **cả hội ngủ** (chủ dự án chốt).
+- Code: `android/app/src/main/kotlin/vn/vaohang/ui/CaveSquare.kt` (+ `SquareSheet` trong `Screens.kt`).
+  Ảnh Gemini ở `android/app/src/main/assets/square/*.webp` (1080, ~110 KB/ảnh); gốc PNG ở `art/incoming/square/`.
+- Cách chọn ảnh (chủ dự án chốt):
+  - Hội **≥ 7 người**: luôn dùng ảnh Gemini vẽ sẵn cả cảnh `square_lit_N` / `square_sleep_N`.
+  - Hội **1–6 người**: mỗi lần mở chọn **ngẫu nhiên** giữa ảnh vẽ sẵn (nếu có) và cảnh **nhân vật thật** của từng người
+    (nền Gemini `square_bg_lit` / `square_bg_out` nếu có, không thì cảnh ghép lớp). Không có nút đổi kiểu, không có câu nhắc (chủ dự án bỏ).
+  - Thiếu ảnh nào thì tự dùng cảnh ghép lớp.
+- Đã có ảnh: lửa cháy 1–8, lửa tắt 1–7 (ảnh lửa tắt 2: ông hói cởi trần — chủ dự án thích, giữ).
+- Màn hang (và cảnh ghép): vòng ngồi đều khoảng cách tới lửa; bóng dưới chân + bóng đổ mềm theo hướng lửa; 7–10 người ngủ không đè nhau.
+- Ảnh xem trước mới nhất: `docs/ui-preview/` (8–18 là ảnh vuông).
+
+**Chờ chủ dự án:**
+1. **Build APK**: chưa build. Chủ dự án đã xem ảnh vuông, nhưng chưa nói "build". Hỏi trước, rồi đẩy một commit không có `[skip ci]`
+   (hoặc chạy lại CI) → artifact `vaohang-debug-apk`.
+2. Chữ trên nút chưa được duyệt rõ: "📸 Ảnh hang", "⬇ Lưu vào máy" / "✓ Đã lưu", "📤 Chia sẻ".
+3. Ảnh còn thiếu (tuỳ chủ dự án làm thêm bằng Gemini, prompt ở `docs/ART_HANDOFF.md` mục 10): lửa tắt 8, lửa cháy 9–10, lửa tắt 9–10
+   (dùng câu chia chỗ ngồi "3 sau lửa + 2 trái + 2 phải + …" để Gemini không vẽ thừa người), và 2 ảnh nền trống
+   (cách nhanh: bảo Gemini xoá người khỏi `square_lit_1` / `square_sleep_1`). Có ảnh nền thì **đo lại** `BG_FIRE_X`, `BG_FIRE_Y`,
+   `BG_FLOOR` trong `CaveSquare.kt` rồi chạy UI preview.
+4. Đề xuất chưa trả lời: thêm **4 nhân vật** (đủ 10, không ai trùng trong hội; đổi cách gán nhân vật) — trước 1/11 hoặc sau pilot.
+5. Đề xuất chưa trả lời: bóng đi theo nhân vật trong 0,7 s lúc đổi chỗ (hiện bóng nhảy tới chỗ mới trước).
+
+Cách xem trước không build APK: đẩy commit có `[skip ci]`, chạy workflow **UI preview** (workflow_dispatch) → ảnh vào `docs/ui-preview/`.
 
 ## Lệnh cho người trực (chạy trong Cloud Shell)
 Token lấy thẳng từ Cloud Run, không dán tay, không in ra:
