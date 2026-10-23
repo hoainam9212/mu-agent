@@ -250,8 +250,11 @@ private val CheerSprites = intArrayOf(
     R.drawable.caveman_3_cheer, R.drawable.caveman_4_cheer, R.drawable.caveman_5_cheer,
 )
 
-// Nâng cốc "Zô": tạm dùng ảnh ngồi cho tới khi có chars_toast.png (xem docs/ART_HANDOFF.md).
-private val ToastSprites = SitSprites
+// Nâng cốc "Zô!": cốc ở phía trái người xem (lật khi ngồi bên trái vòng để nâng cốc vào giữa).
+private val ToastSprites = intArrayOf(
+    R.drawable.caveman_0_toast, R.drawable.caveman_1_toast, R.drawable.caveman_2_toast,
+    R.drawable.caveman_3_toast, R.drawable.caveman_4_toast, R.drawable.caveman_5_toast,
+)
 
 fun cavemanVariant(seed: Long): Int = Math.floorMod(seed, SitSprites.size.toLong()).toInt()
 
@@ -316,6 +319,8 @@ fun Caveman(
             Image(
                 painterResource(sprite), contentDescription = name, contentScale = ContentScale.Fit, alignment = Alignment.BottomCenter,
                 modifier = Modifier.fillMaxSize().graphicsLayer {
+                    // "Zô!": nhún người lên theo nhịp nâng cốc.
+                    if (toasting) translationY = -6.dp.toPx() * breathe
                     scaleY = 1f + 0.025f * breathe
                     scaleX = (1f - 0.01f * breathe) * if (flip) -1f else 1f
                     transformOrigin = TransformOrigin(0.5f, 1f)

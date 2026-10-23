@@ -148,7 +148,7 @@ vệt sáng lửa ở (0.50, 0.685); nền đất từ y ≈ 0.54. Ảnh vỗ va
   - `SitSprites` / `SleepSprites` / `CheerSprites`: thêm `PatSprites` nếu có ảnh vỗ vai.
 - Xem trước giao diện: chạy workflow **UI preview** (Actions → UI preview → Run workflow); ảnh chụp lưu ở `docs/ui-preview/`.
 
-## 9. Bổ sung (23/10): tư thế nâng cốc "Zô!" thay cho vỗ vai
+## 9. Bổ sung (23/10): tư thế nâng cốc "Zô!" thay cho vỗ vai (đã có ảnh và đã ghép vào app)
 
 Chủ dự án đổi cử chỉ an ủi từ **vỗ vai** sang **nâng cốc bia nói "Zô!"** (không cần ngồi sát nhau).
 Cần thêm một ảnh, tạo trong **cùng cuộc trò chuyện Gemini đã tạo bộ chibi** (để giữ đúng 6 người):
