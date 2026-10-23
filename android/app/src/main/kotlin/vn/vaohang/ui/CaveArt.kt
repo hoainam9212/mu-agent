@@ -430,8 +430,9 @@ fun CampScene(people: List<Member>, meId: Long, burning: Boolean, modifier: Modi
             }
         }
         seats.forEach { (m, x, y) ->
+            // Không hiện tên quanh lửa: hang đông thì tên đè nhau. Bạn có vầng sáng vàng.
             Caveman(
-                m.nickname, m.id, width = avatar, me = m.id == meId, asleep = !burning,
+                m.nickname, m.id, width = avatar, me = m.id == meId, asleep = !burning, showName = false,
                 modifier = Modifier.offset(x.dp, y.dp).zIndex(y),
             )
         }
