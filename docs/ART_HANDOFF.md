@@ -223,5 +223,5 @@ Kiểm tra: hai ảnh cùng khung hình, đống lửa cùng chỗ, sàn trống
 `square_bg_lit` / `square_bg_out` + nhân vật thật; thiếu ảnh nào thì dùng cảnh ghép lớp.
 
 Ghép vào app (phiên Claude Code làm): thu về 1080×1080 WebP vào `drawable-nodpi/square_lit_N.webp`, `square_sleep_N.webp`;
-`CaveSquare` trong `android/app/src/main/kotlin/vn/vaohang/ui/CaveSquare.kt` chọn ảnh theo `people.size` và `burning`
+`CaveSquare` (ảnh đặt ở `android/app/src/main/assets/square/<tên>.webp`) trong `android/app/src/main/kotlin/vn/vaohang/ui/CaveSquare.kt` chọn ảnh theo `people.size` và `burning`
 (giữ cảnh ghép lớp hiện tại làm dự phòng nếu thiếu ảnh); chạy workflow UI preview để chủ dự án duyệt trước khi build APK.

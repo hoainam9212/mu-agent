@@ -1,11 +1,11 @@
 package vn.vaohang.ui
 
-import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.provider.MediaStore
 import androidx.compose.foundation.Image
@@ -20,13 +20,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
@@ -40,7 +41,7 @@ private const val SQUARE_PX = 1080
 private const val SQUARE_FIRE_Y = 0.62f
 private val SquareScene = 330.dp
 
-// Ảnh Gemini vẽ sẵn cả cảnh (`square_lit_N`, `square_sleep_N`) dùng cho hội đông: khó nhận ra ai với ai.
+// Ảnh Gemini (trong assets/square/): vẽ sẵn cả cảnh (`square_lit_N`, `square_sleep_N`) cho hội đông, khó nhận ra ai với ai.
 // Hội nhỏ thì Gemini chỉ vẽ nền (`square_bg_lit`, `square_bg_out`), app xếp đúng nhân vật của từng người vào.
 private const val FULL_SCENE_FROM = 7
 
@@ -49,10 +50,10 @@ private const val BG_FIRE_X = 0.5f
 private const val BG_FIRE_Y = 0.62f
 private val BG_FLOOR = floatArrayOf(0.05f, 0.42f, 0.95f, 0.42f, 0.99f, 1.0f, 0.01f, 1.0f)
 
-/** Id ảnh trong drawable theo tên, 0 nếu chưa có (ảnh Gemini thêm dần, thiếu thì dùng cảnh ghép lớp). */
-@SuppressLint("DiscouragedApi")
-private fun drawableNamed(context: Context, name: String): Int =
-    context.resources.getIdentifier(name, "drawable", context.packageName)
+/** Ảnh Gemini trong assets/square/, null nếu chưa có (ảnh thêm dần, thiếu thì dùng cảnh ghép lớp). */
+private fun squareArt(context: Context, name: String): ImageBitmap? = runCatching {
+    context.assets.open("square/$name.webp").use { BitmapFactory.decodeStream(it) }?.asImageBitmap()
+}.getOrNull()
 
 /**
  * Cảnh hang vuông để khoe: chỉ những người đang trong hang, không tên, không chữ, không ai được tô sáng.
@@ -63,13 +64,13 @@ fun CaveSquare(people: List<Member>, burning: Boolean, modifier: Modifier = Modi
     val context = LocalContext.current
     val n = people.size
     val scene = remember(n, burning) {
-        if (n >= FULL_SCENE_FROM) drawableNamed(context, "square_${if (burning) "lit" else "sleep"}_$n") else 0
+        if (n >= FULL_SCENE_FROM) squareArt(context, "square_${if (burning) "lit" else "sleep"}_$n") else null
     }
-    val bg = remember(burning) { drawableNamed(context, if (burning) "square_bg_lit" else "square_bg_out") }
+    val bg = remember(burning) { squareArt(context, if (burning) "square_bg_lit" else "square_bg_out") }
     when {
-        scene != 0 -> Image(painterResource(scene), null, modifier.requiredSize(SquareSide), contentScale = ContentScale.Crop)
-        bg != 0 -> Box(modifier.requiredSize(SquareSide)) {
-            Image(painterResource(bg), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        scene != null -> Image(scene, null, modifier.requiredSize(SquareSide), contentScale = ContentScale.Crop)
+        bg != null -> Box(modifier.requiredSize(SquareSide)) {
+            Image(bg, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             val side = SquareSide.value
             val floor = remember {
                 { ox: Float, oy: Float -> inFloor((BG_FIRE_X * side + ox) / side, (BG_FIRE_Y * side + oy) / side, BG_FLOOR) }
