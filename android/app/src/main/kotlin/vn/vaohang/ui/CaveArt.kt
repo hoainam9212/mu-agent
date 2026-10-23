@@ -333,6 +333,48 @@ fun CampScene(people: List<Member>, meId: Long, burning: Boolean, modifier: Modi
     }
 }
 
+// ---- Cửa hang (thẻ hội) ----------------------------------------------------------------------
+
+/** Cửa hang nhỏ: mở thì lửa bập bùng bên trong, đóng thì tảng đá chắn cửa. */
+@Composable
+fun CaveMouth(open: Boolean, modifier: Modifier = Modifier) {
+    val a by rememberInfiniteTransition(label = "mouth").animateFloat(
+        0f, 1f, infiniteRepeatable(tween(600, easing = LinearEasing), RepeatMode.Reverse), label = "a",
+    )
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        val hill = Path().apply {
+            moveTo(0f, h)
+            cubicTo(0f, h * 0.05f, w, h * 0.05f, w, h)
+            close()
+        }
+        drawPath(hill, RockLight)
+        drawCircle(RockEdge, w * 0.04f, Offset(w * 0.18f, h * 0.62f))
+        drawCircle(RockEdge, w * 0.03f, Offset(w * 0.84f, h * 0.70f))
+        drawCircle(RockEdge, w * 0.025f, Offset(w * 0.30f, h * 0.30f))
+        val mouth = Path().apply {
+            moveTo(w * 0.30f, h)
+            lineTo(w * 0.30f, h * 0.62f)
+            cubicTo(w * 0.30f, h * 0.28f, w * 0.70f, h * 0.28f, w * 0.70f, h * 0.62f)
+            lineTo(w * 0.70f, h)
+            close()
+        }
+        drawPath(mouth, CaveBlack)
+        if (open) {
+            drawCircle(
+                Brush.radialGradient(listOf(Ember.copy(alpha = 0.55f + 0.2f * a), Color.Transparent), center = Offset(w / 2, h * 0.86f), radius = w * 0.24f),
+                radius = w * 0.24f, center = Offset(w / 2, h * 0.86f),
+            )
+            flame(MuRed, w / 2, h * 0.97f, w * 0.16f, h * 0.36f * (0.85f + 0.15f * a), (a - 0.5f) * w * 0.02f)
+            flame(Gold, w / 2, h * 0.97f, w * 0.08f, h * 0.18f * (0.8f + 0.2f * a), (0.5f - a) * w * 0.02f)
+        } else {
+            drawCircle(Stone, w * 0.19f, Offset(w * 0.5f, h * 0.80f))
+            drawCircle(Color.White.copy(alpha = 0.10f), w * 0.07f, Offset(w * 0.44f, h * 0.72f))
+        }
+    }
+}
+
 // ---- Pháo giấy ------------------------------------------------------------------------------
 
 private data class Flake(val x: Float, val speed: Float, val w: Float, val color: Color, val phase: Float, val spin: Float)

@@ -69,7 +69,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
@@ -230,14 +229,15 @@ private fun ConsentRow(title: String, detail: String, checked: Boolean, onChange
     }
 }
 
+/** Luật trong hang dạng biểu tượng: một hình, hai ba chữ. */
 @Composable
-private fun StepRow(icon: String, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(RockLight), contentAlignment = Alignment.Center) {
-            Text(icon, fontSize = 22.sp)
-        }
-        Spacer(Modifier.width(14.dp))
-        Body(text, Ink)
+private fun RuleBadge(icon: String, text: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier.clip(RoundedCornerShape(18.dp)).background(Rock).padding(vertical = 12.dp, horizontal = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(icon, fontSize = 26.sp)
+        Text(text, color = Mute, fontSize = 12.sp, textAlign = TextAlign.Center, lineHeight = 15.sp)
     }
 }
 
@@ -254,37 +254,26 @@ fun OnboardingScreen(busy: Boolean, onDone: (String, Boolean, Boolean) -> Unit) 
             Modifier.padding(horizontal = 24.dp).navigationBarsPadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text("VÀO HANG", color = Ink, fontSize = 44.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
             Text(
-                "MU thua thì cả hội rủ nhau vào hang, ngồi quanh đống lửa. MU thắng thì cùng ra khỏi hang.",
-                color = Ink, fontSize = 17.sp, lineHeight = 24.sp,
+                "VÀO HANG", color = Ink, fontSize = 48.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
             )
-            StepRow("💔", "MU thua → hang mở cho hội anh em của bạn.")
-            StepRow("🤝", "Ngồi quanh lửa vỗ vai nhau bằng câu soạn sẵn. Không có ô chat.")
-            StepRow("🔥", "30 phút sau lửa tắt, cả hội đi ngủ. Hang chỉ đóng khi MU thắng.")
             OutlinedTextField(
                 value = nickname, onValueChange = { nickname = it.take(40) },
                 label = { Text("Biệt danh trong hang") }, placeholder = { Text("vd. Tuấn Tối Cổ", color = Mute) },
                 singleLine = true, colors = caveFieldColors(), shape = RoundedCornerShape(18.dp),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Rock).padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Kicker("LUẬT TRONG HANG")
-                listOf(
-                    "Chỉ anh em đã đồng ý cùng hội mới thấy nhau.",
-                    "Không chat, không chụp màn hình trong hang.",
-                    "Câu vỗ vai chỉ tự trào về MU, không chê ai.",
-                    "Không điểm danh ai vắng mặt.",
-                    "Không bán cảm xúc của bạn cho quảng cáo hay cá cược.",
-                ).forEach { Body("✓  $it", Ink) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                RuleBadge("🤝", "Chỉ anh em", Modifier.weight(1f))
+                RuleBadge("🤐", "Không chat", Modifier.weight(1f))
+                RuleBadge("📵", "Không chụp màn hình", Modifier.weight(1f))
+                RuleBadge("🙅", "Không chê ai", Modifier.weight(1f))
             }
-            ConsentRow("Đo giấc ngủ ẩn danh", "Bạn tắt máy bao lâu sau còi (chỉ trong 50 phút sau trận).", measure) { measure = it }
-            ConsentRow("Tôi đi làm 8:00–18:00", "Giờ đó đừng gọi, để tối báo (vd. anh em ở Nhật).", daytimeWork) { daytimeWork = it }
+            ConsentRow("😴 Đo giấc ngủ ẩn danh", "50 phút sau trận", measure) { measure = it }
+            ConsentRow("💼 Đi làm 8:00–18:00", "Giờ đó để tối báo", daytimeWork) { daytimeWork = it }
             FireButton(
-                "🔥  Nhóm lửa, vào thôi", onClick = { onDone(nickname, measure, daytimeWork) },
+                "🔥  Vào hang", onClick = { onDone(nickname, measure, daytimeWork) },
                 enabled = nickname.isNotBlank() && !busy, modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(12.dp))
@@ -328,21 +317,11 @@ private fun NextMatchCard(m: MatchDto) {
             )
             Text(
                 "${m.competition} · ${Weekdays[local.dayOfWeek.value - 1]} ${local.dayOfMonth}/${local.monthValue} · " +
-                    "%02d:%02d".format(local.hour, local.minute),
+                    "%02d:%02d".format(local.hour, local.minute) + if (local.hour < 6) "  🌙" else "",
                 color = Color.White.copy(alpha = 0.85f), fontSize = 14.sp,
             )
-            if (local.hour < 6) Text("🌙 Trận đêm – app sẽ nhắc trước giờ bóng lăn", color = Gold, fontSize = 13.sp)
         }
     }
-}
-
-@Composable
-private fun StatusChip(open: Boolean) {
-    val (text, bg, fg) = if (open) Triple("🔥 HANG ĐANG MỞ", MuRed, Color.White) else Triple("Hang đóng", RockLight, Mute)
-    Text(
-        text, color = fg, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp,
-        modifier = Modifier.clip(RoundedCornerShape(50)).background(bg).padding(horizontal = 10.dp, vertical = 4.dp),
-    )
 }
 
 @Composable
@@ -359,21 +338,20 @@ private fun GroupCard(group: GroupDto, meId: Long, actions: UiActions) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(group.name, color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            if (group.status != "pending") StatusChip(open)
+            CaveMouth(open, Modifier.size(84.dp, 70.dp))
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(group.name, color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                if (group.status == "pending") Text("⏳ Chờ duyệt", color = Mute, fontSize = 14.sp)
+                else Text("👥 ${group.members.size}", color = Mute, fontSize = 14.sp)
+            }
         }
-        if (group.status == "pending") {
-            Body("⏳ Đang đợi chủ hội duyệt. Duyệt xong là bạn thấy hang của hội.")
-            return@Column
-        }
+        if (group.status == "pending") return@Column
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            group.members.forEach { Caveman(it.nickname, it.id, width = 46.dp, me = it.id == meId) }
+            group.members.forEach { Caveman(it.nickname, it.id, width = 46.dp, me = it.id == meId, asleep = !open) }
         }
         if (open && cave != null) {
-            Body("MU vừa thua. Hang mở rồi, anh em đang quây quanh lửa.", Ink)
-            FireButton("🔥  Vào xem hang", onClick = { actions.openCave(cave.id) }, pulse = true, modifier = Modifier.fillMaxWidth())
-        } else {
-            Body("MU thua thì hang mở, cả hội vào ngồi quanh lửa.")
+            FireButton("🔥  Vào hang", onClick = { actions.openCave(cave.id) }, pulse = true, modifier = Modifier.fillMaxWidth())
         }
         group.inviteCode?.let { code ->
             Row(
@@ -381,10 +359,10 @@ private fun GroupCard(group: GroupDto, meId: Long, actions: UiActions) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Kicker("MÃ MỜI", Mute)
+                    Kicker("🔑 MÃ MỜI", Mute)
                     Text(code, color = Gold, fontSize = 24.sp, fontWeight = FontWeight.Black, letterSpacing = 4.sp)
                 }
-                GhostButton("Gửi mã", onClick = {
+                GhostButton("📤 Gửi", onClick = {
                     val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(
                         Intent.EXTRA_TEXT,
                         "Vào hội \"${group.name}\" trên app Vào Hang nhé – MU thua thì cả hội vào hang 🔥\nMã mời: $code",
@@ -396,8 +374,8 @@ private fun GroupCard(group: GroupDto, meId: Long, actions: UiActions) {
         group.pending.forEach { p ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Caveman(p.nickname, p.id, width = 36.dp, showName = false)
-                Text("${p.nickname} xin vào hội", color = Ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                FireButton("Duyệt", onClick = { actions.approve(group.id, p.id) })
+                Text("${p.nickname} 🙋", color = Ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                FireButton("✓ Duyệt", onClick = { actions.approve(group.id, p.id) })
             }
         }
     }
@@ -427,15 +405,14 @@ fun HomeScreen(state: UiState, actions: UiActions) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 FireButton("＋  Tạo hội", onClick = { creating = true }, modifier = Modifier.weight(1f))
-                GhostButton("Nhập mã mời", onClick = { joining = true }, modifier = Modifier.weight(1f))
+                GhostButton("🔑  Nhập mã", onClick = { joining = true }, modifier = Modifier.weight(1f))
             }
         }
         if (state.groups.isEmpty()) {
             item {
                 Column(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Campfire(burning = false, modifier = Modifier.size(120.dp))
-                    Text("Chưa có hội nào", color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Body("Tạo hội rồi gửi mã mời cho anh em, hoặc nhập mã anh em gửi.", align = TextAlign.Center)
+                    Text("Chưa có hội nào", color = Mute, fontSize = 16.sp)
                 }
             }
         } else {
@@ -476,9 +453,9 @@ private fun FireTimer(until: String?, onExpired: () -> Unit) {
     val left = Duration.between(now, end).let { if (it.isNegative) Duration.ZERO else it }
     val fraction = (left.seconds / (FIRE_MINUTES * 60f)).coerceIn(0f, 1f)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row {
-            Text("🔥 Lửa còn cháy", color = Ink, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Text("%d:%02d".format(left.toMinutes(), left.seconds % 60), color = Ember, fontWeight = FontWeight.Black)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("🔥", fontSize = 20.sp, modifier = Modifier.weight(1f))
+            Text("%d:%02d".format(left.toMinutes(), left.seconds % 60), color = Ember, fontSize = 18.sp, fontWeight = FontWeight.Black)
         }
         LinearProgressIndicator(
             progress = { fraction }, color = Ember, trackColor = RockLight,
@@ -495,7 +472,7 @@ private fun PatBubble(from: String, text: String) {
             Modifier.clip(RoundedCornerShape(topStart = 4.dp, topEnd = 18.dp, bottomEnd = 18.dp, bottomStart = 18.dp))
                 .background(RockLight).padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
-            Text("$from vỗ vai", color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(from, color = Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Text("“$text”", color = Ink, fontSize = 15.sp, lineHeight = 21.sp)
         }
     }
@@ -526,20 +503,8 @@ private fun FireOutPanel() {
         Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Rock.copy(alpha = 0.85f)).padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Lửa tắt rồi", color = Ink, fontSize = 22.sp, fontWeight = FontWeight.Black)
-        Body("Cả hội đi ngủ thôi.", Ink)
+        Text("💤", fontSize = 40.sp)
         alarm?.let { Body(it, Gold, align = TextAlign.Center) }
-        Body("Hang vẫn mở tới khi MU thắng. Trận sau anh em nhóm lửa tiếp.", align = TextAlign.Center)
-    }
-}
-
-private fun sceneCaption(cave: CaveView, burning: Boolean): String {
-    val n = cave.inside.size
-    return when {
-        n == 0 -> "Chưa ai ngồi bên lửa."
-        !burning -> "Lửa tắt rồi, anh em ngủ cả."
-        cave.meInside && n == 1 -> "Mình bạn bên đống lửa. Rủ anh em vào đi!"
-        else -> "$n anh em đang ngồi quanh lửa"
     }
 }
 
@@ -571,34 +536,20 @@ fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, actions: UiAction
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 cave.score?.let { ScoreBoard(it) }
             }
-            if (burning) {
-                FireTimer(cave.lights.until, onExpired = { actions.refreshCaveQuietly(cave.id) })
-            } else if (open) {
-                Body("Lửa đã tắt · hang vẫn mở tới khi MU thắng", align = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            }
+            if (burning) FireTimer(cave.lights.until, onExpired = { actions.refreshCaveQuietly(cave.id) })
             CampScene(cave.inside, meId, burning)
-            Body(sceneCaption(cave, burning), Ink, align = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             when {
-                !open -> Body("Hang đã đóng – MU thắng rồi!", Gold, align = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                !open -> {}
                 !cave.meInside -> {
-                    Body("Vào hay không là bạn chọn.", align = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                    FireButton("🔥  VÀO HANG NGỒI CÙNG", onClick = { actions.enterCave(cave.id) }, pulse = true, modifier = Modifier.fillMaxWidth())
+                    FireButton("🔥  Vào hang", onClick = { actions.enterCave(cave.id) }, pulse = true, modifier = Modifier.fillMaxWidth())
                 }
                 else -> {
                     if (!burning) FireOutPanel()
-                    if (cave.pats.isNotEmpty()) {
-                        SectionTitle("Anh em vỗ vai")
-                        cave.pats.forEach { PatBubble(it.from, it.text) }
-                    }
-                    if (burning && cave.choices.isNotEmpty()) {
-                        SectionTitle("Vỗ vai anh em – chọn một câu")
-                        cave.choices.forEach { c -> PatChoice(c.text) { actions.pat(cave.id, c.id) } }
-                    }
-                    if (burning) {
-                        GhostButton("📣  Rủ anh em đang thức", onClick = { actions.invite(cave.id) }, modifier = Modifier.fillMaxWidth())
-                    }
-                    TextButton(onClick = { actions.leaveCave(cave.id) }, modifier = Modifier.fillMaxWidth()) {
-                        Text("Ra khỏi hang", color = Mute)
+                    cave.pats.forEach { PatBubble(it.from, it.text) }
+                    if (burning) cave.choices.forEach { c -> PatChoice(c.text) { actions.pat(cave.id, c.id) } }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        if (burning) GhostButton("📣  Rủ anh em", onClick = { actions.invite(cave.id) }, modifier = Modifier.weight(1f))
+                        GhostButton("🚪  Ra hang", onClick = { actions.leaveCave(cave.id) }, color = Mute, modifier = Modifier.weight(1f))
                     }
                 }
             }
@@ -636,19 +587,12 @@ fun CelebrateScreen(onDone: () -> Unit) {
                 "RA KHỎI HANG!", color = Color.White, fontSize = 44.sp, fontWeight = FontWeight.Black,
                 textAlign = TextAlign.Center, modifier = Modifier.scale(pop),
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "MU thắng rồi! Cả hội rời hang, ra ánh sáng.", color = Color.White, fontSize = 17.sp,
-                textAlign = TextAlign.Center,
-            )
             Spacer(Modifier.height(28.dp))
             Button(
                 onClick = onDone,
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = MuRed),
                 contentPadding = PaddingValues(horizontal = 28.dp, vertical = 16.dp),
-            ) { Text("🎉  Ăn mừng thôi", fontSize = 17.sp, fontWeight = FontWeight.Black) }
-            Spacer(Modifier.height(16.dp))
-            Text("“Giờ mới dám mở Facebook.”", color = Color.White.copy(alpha = 0.9f), fontStyle = FontStyle.Italic)
+            ) { Text("🎉  Ăn mừng", fontSize = 17.sp, fontWeight = FontWeight.Black) }
         }
     }
 }
