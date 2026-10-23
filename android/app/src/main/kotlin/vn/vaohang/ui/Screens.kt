@@ -218,7 +218,7 @@ private val DemoCrew = listOf(Member(-11, "Tuấn"), Member(-12, "Hùng"), Membe
 @Composable
 private fun ConsentRow(title: String, detail: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Rock).clickable { onChange(!checked) }.padding(16.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(CaveBlack.copy(alpha = 0.6f)).clickable { onChange(!checked) }.padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
@@ -237,7 +237,7 @@ private fun ConsentRow(title: String, detail: String, checked: Boolean, onChange
 @Composable
 private fun RuleBadge(icon: String, text: String, modifier: Modifier = Modifier) {
     Column(
-        modifier.fillMaxHeight().clip(RoundedCornerShape(18.dp)).background(Rock).padding(vertical = 12.dp, horizontal = 6.dp),
+        modifier.fillMaxHeight().clip(RoundedCornerShape(18.dp)).background(CaveBlack.copy(alpha = 0.6f)).padding(vertical = 12.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(icon, fontSize = 26.sp)
@@ -250,8 +250,10 @@ fun OnboardingScreen(busy: Boolean, onDone: (String, Boolean, Boolean) -> Unit) 
     var nickname by remember { mutableStateOf("") }
     var measure by remember { mutableStateOf(true) }
     var daytimeWork by remember { mutableStateOf(false) }
+    // Cả màn chào nằm trong hang: cảnh lửa ở trên, phần nhập tên trên nền đất tối.
+    CaveBackdrop(fireOn = true, fireY = 0.31f) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding()) {
-        CaveBackdrop(fireOn = true, fireY = 0.73f, modifier = Modifier.fillMaxWidth().height(330.dp)) {
+        Box(Modifier.fillMaxWidth().height(330.dp)) {
             CampScene(DemoCrew, meId = 0, burning = true, height = 290.dp, modifier = Modifier.align(Alignment.BottomCenter))
         }
         Column(
@@ -282,6 +284,7 @@ fun OnboardingScreen(busy: Boolean, onDone: (String, Boolean, Boolean) -> Unit) 
             )
             Spacer(Modifier.height(12.dp))
         }
+    }
     }
 }
 

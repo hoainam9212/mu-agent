@@ -413,13 +413,24 @@ fun CampScene(
         // Câu vỗ vai hiện thành bong bóng ngay trên đầu người nói.
         seats.forEach { (m, x, y) ->
             val text = said[m.id] ?: return@forEach
-            val bx = x.coerceIn(-95f, 95f)
-            Text(
-                text, color = CaveBlack, fontSize = 12.sp, lineHeight = 15.sp, textAlign = TextAlign.Center, maxLines = 3,
-                modifier = Modifier.offset(bx.dp, (y - avatar.value * 1.05f - 22f).dp).zIndex(2000f)
-                    .widthIn(max = 170.dp).clip(RoundedCornerShape(14.dp)).background(Ink.copy(alpha = 0.95f))
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-            )
+            val bx = x.coerceIn(-100f, 100f)
+            Column(
+                Modifier.offset(bx.dp, (y - avatar.value * 0.62f - 30f).dp).zIndex(2000f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text, color = CaveBlack, fontSize = 12.sp, lineHeight = 15.sp, textAlign = TextAlign.Center, maxLines = 3,
+                    modifier = Modifier.widthIn(max = 150.dp).clip(RoundedCornerShape(14.dp)).background(Ink.copy(alpha = 0.95f))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                )
+                // Đuôi bong bóng chỉ xuống người nói.
+                Canvas(Modifier.offset(x = (x - bx).dp).size(14.dp, 7.dp)) {
+                    drawPath(
+                        Path().apply { moveTo(0f, 0f); lineTo(size.width, 0f); lineTo(size.width / 2, size.height); close() },
+                        Ink.copy(alpha = 0.95f),
+                    )
+                }
+            }
         }
     }
 }
