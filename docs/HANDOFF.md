@@ -13,6 +13,7 @@
 - Bước tiếp: vào hang trong app → `draw-demo` → `win-demo`. Giữ điện thoại sáng màn hình khi chạy.
 - **Trước 25/10 23:00 giờ Tokyo (MU–Bournemouth):** đặt hội 3 (và hội 2 nếu còn demo) về `is_demo: false`.
 - Trận thật kế tiếp sau đó: MU–Roma 3/11/2026 20:00 GMT (pilot).
+- Sau pilot (từ 5/11): bản web cho anh em iPhone, kế hoạch ở `docs/PLAN.md` §9.
 
 ## Lệnh cho người trực (chạy trong Cloud Shell)
 Token lấy thẳng từ Cloud Run, không dán tay, không in ra:

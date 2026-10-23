@@ -63,6 +63,7 @@ Mốc chính:
 - Ô chat tự do, gửi ảnh, chuyển tiếp ra ngoài.
 - Bảng xếp hạng, điểm danh người vắng, "ai buồn nhất".
 - iOS, phát hành Google Play công khai (pilot phát qua Firebase App Distribution / Play internal testing).
+  Anh em dùng iPhone: làm bản web sau pilot, xem §9.
 - Đội khác ngoài MU. Logo MU.
 
 ---
@@ -331,3 +332,40 @@ Còn mở:
 | Token football-data.org / key API-Football | Chưa có | Đăng ký miễn phí, thử `/v1/admin/schedule/refresh` |
 | Triển khai máy chủ (Cloud Run hoặc VPS) | Chưa làm | |
 
+---
+
+## 9. Sau pilot: bản web cho anh em dùng iPhone (PWA)
+
+Chốt 23/10: **không lên App Store** (99 USD/năm, phải viết lại app, phải qua duyệt). Thay bằng bản web cài lên
+màn hình chính, nhận thông báo qua Web Push. Làm **sau khi có báo cáo pilot (5/11)**; app Android giữ nguyên.
+
+**Người dùng iPhone:** mở link trong Safari → Chia sẻ → "Thêm vào MH chính" → mở từ icon → bấm "Bật thông báo".
+Cần iOS 16.4 trở lên. Android cũng mở được bản web, nhưng vẫn khuyên dùng app.
+
+**Có**
+- Nhận tin hang mở / hoà nhóm lửa lại / ra khỏi hang / nhắc trận đêm / có người rủ.
+- Vào hang, màn hang (người tối cổ quanh đống lửa, dùng lại ảnh của app), gửi câu Zô, rủ anh em, màn ăn mừng.
+- Hội anh em: tạo hội, mã mời, duyệt. Dùng chung tài khoản và database với app Android.
+- Lời thông báo dùng đúng câu đã duyệt trong `NotificationCopy.kt`.
+
+**Không có (giới hạn của web trên iOS)**
+- Không tự đoán thức/ngủ: iOS bắt mọi Web Push phải hiện ngay. Thay bằng lựa chọn của từng người,
+  "Báo luôn" hoặc "Để sáng báo" (giờ báo sáng tự đặt); máy chủ gửi đúng lúc.
+- Không đo giờ tắt máy, không chặn chụp màn hình.
+
+**Việc cần làm**
+
+| Phần | Việc |
+|---|---|
+| SRV | Bảng `web_push_subscriptions` (endpoint, khoá p256dh/auth); API đăng ký/huỷ; khoá VAPID cất trong biến môi trường Cloud Run (không commit) |
+| SRV | Notifier gửi cả FCM (Android) và Web Push (`pywebpush`); với người dùng web, máy chủ soạn sẵn tiêu đề/nội dung theo câu đã duyệt |
+| SRV | Lựa chọn "Báo luôn / Để sáng báo" + giờ báo sáng của từng người; tick mỗi phút gửi các tin đã hẹn |
+| WEB | Trang tĩnh (HTML/JS nhẹ), `manifest.webmanifest`, icon, service worker nhận push; phục vụ ngay từ máy chủ FastAPI (cùng địa chỉ, không cần CORS) |
+| WEB | Màn đăng ký, hội anh em, màn hang, ăn mừng; hướng dẫn "Thêm vào MH chính" khi mở bằng Safari thường |
+| TEST | Thử trên iPhone thật (iOS 16.4+, 17, 18), Safari + bản đã thêm vào màn hình chính; replay thua → hoà → thắng |
+
+**Thời gian:** khoảng 1–2 tuần. **Chi phí:** 0đ thêm (Cloud Run + Supabase + Web Push đều trong gói miễn phí).
+
+**Rủi ro**
+- Người dùng quên bước "Thêm vào MH chính" thì không có thông báo → trang tự hiện hướng dẫn, kiểm tra quyền mỗi lần mở.
+- Web Push trên iOS đôi khi trễ hoặc mất nếu lâu không mở app → nhắc mở web trước trận đêm; theo dõi tỷ lệ nhận tin qua telemetry.
