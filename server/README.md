@@ -9,13 +9,28 @@ soạn câu vỗ vai bằng Claude (có bộ lọc và kho dự phòng).
 cd server
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
-pytest -q                                   # 71 test
+pytest -q                                   # 73 test
 
 ADMIN_TOKEN=dev uvicorn --factory vaohang.main:create_app --port 8000
 ```
 
 Không có token/key nào thì máy chủ chạy ở chế độ `manual` (trận và kết quả nhập tay), thông báo không gửi thật
 mà giữ trong outbox: `GET /v1/admin/outbox` (header `X-Admin-Token`).
+
+## Chạy thật trên Cloud Run
+
+Database dùng Postgres miễn phí của Supabase (Cloud Run xoá ổ đĩa mỗi lần khởi động lại). Trong Cloud Shell:
+
+```bash
+git clone -b claude/exciting-ramanujan-mptsqi https://github.com/hoainam9212/mu-agent
+bash mu-agent/deploy/cloudrun.sh <project-id>
+```
+
+Script bật dịch vụ, tạo tài khoản chạy máy chủ chỉ có quyền gửi FCM, build và chạy máy chủ (tối đa 1 bản,
+CPU chỉ cấp khi có request), đặt Cloud Scheduler gọi `POST /v1/admin/tick` mỗi phút thay cho vòng canh chạy nền,
+rồi in địa chỉ máy chủ và `ADMIN_TOKEN`. Chạy lại để cập nhật code hoặc đổi token.
+
+Thử bộ test trên Postgres: `TEST_DATABASE_URL=postgresql://… pytest -q`.
 
 ## Biến môi trường
 

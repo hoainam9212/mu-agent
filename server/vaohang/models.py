@@ -202,8 +202,19 @@ class KeyValue(Base):
     value: Mapped[str] = mapped_column(Text)
 
 
+def normalize_database_url(database_url: str) -> str:
+    """Supabase/Neon đưa chuỗi dạng postgresql://… → dùng driver psycopg 3."""
+    for prefix in ("postgres://", "postgresql://"):
+        if database_url.startswith(prefix):
+            return "postgresql+psycopg://" + database_url[len(prefix):]
+    return database_url
+
+
 def make_sessionmaker(database_url: str) -> sessionmaker:
+    database_url = normalize_database_url(database_url)
     kwargs = {}
+    if not database_url.startswith("sqlite"):
+        kwargs["pool_pre_ping"] = True  # pooler có thể cắt kết nối rảnh
     if database_url.startswith("sqlite"):
         kwargs["connect_args"] = {"check_same_thread": False}
         if database_url in ("sqlite://", "sqlite:///:memory:"):

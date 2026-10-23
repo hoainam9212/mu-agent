@@ -321,8 +321,7 @@ def admin_group_demo(group_id: int, body: DemoIn, db: Session = Depends(get_db))
 
 @admin.post("/tick")
 def admin_tick(db: Session = Depends(get_db), c=Depends(get_container)):
-    c.matches.tick(db)
-    return {"ok": True}
+    return {"ok": True, "ran": c.matches.tick(db)}
 
 
 @admin.post("/schedule/refresh")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime
 
 import pytest
@@ -32,8 +33,25 @@ class FakeProvider:
         return self.fixtures.get(provider_id)
 
 
+# Đặt TEST_DATABASE_URL=postgresql://… để chạy cùng bộ test trên Postgres (như khi chạy thật).
+TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL")
+
+
+@pytest.fixture(autouse=True)
+def _fresh_postgres():
+    if TEST_DATABASE_URL:
+        from sqlalchemy import create_engine
+
+        from vaohang.models import Base, normalize_database_url
+
+        engine = create_engine(normalize_database_url(TEST_DATABASE_URL))
+        Base.metadata.drop_all(engine)
+        engine.dispose()
+    yield
+
+
 def make_settings(**overrides) -> Settings:
-    base = dict(database_url="sqlite://", poller_enabled=False, admin_token="secret", match_provider="manual")
+    base = dict(database_url=TEST_DATABASE_URL or "sqlite://", poller_enabled=False, admin_token="secret", match_provider="manual")
     base.update(overrides)
     return Settings(**base)
 

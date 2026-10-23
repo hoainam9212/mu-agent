@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import threading
 from datetime import datetime, timedelta
 
 import httpx
@@ -56,12 +57,20 @@ class MatchService:
         self.provider = provider
         self.caves = caves
         self.notifier = notifier
+        self._tick_lock = threading.Lock()
 
-    def tick(self, db: Session) -> None:
-        self.refresh_schedule(db)
-        self.send_reminders(db)
-        self.poll_results(db)
-        self.finish_replays(db)
+    def tick(self, db: Session) -> bool:
+        """Một vòng canh trận. Trả False nếu vòng trước chưa xong (Cloud Scheduler gọi chồng)."""
+        if not self._tick_lock.acquire(blocking=False):
+            return False
+        try:
+            self.refresh_schedule(db)
+            self.send_reminders(db)
+            self.poll_results(db)
+            self.finish_replays(db)
+        finally:
+            self._tick_lock.release()
+        return True
 
     # ---- Lịch và kết quả --------------------------------------------------------------------
 

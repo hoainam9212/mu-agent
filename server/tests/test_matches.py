@@ -109,3 +109,26 @@ def test_provider_error_is_recorded_not_raised(container, provider, client):
     tick(container)
     status = client.get("/v1/admin/status", headers={"X-Admin-Token": "secret"}).json()
     assert "Free plans" in status["last_provider_error"]["error"]
+
+
+def test_overlapping_tick_is_skipped(container, provider):
+    provider.fixtures["r1"] = info()
+    container.matches._tick_lock.acquire()  # giả lập vòng trước đang chạy
+    try:
+        with container.sessions() as db:
+            assert container.matches.tick(db) is False
+        assert fixture(container) is None
+    finally:
+        container.matches._tick_lock.release()
+    with container.sessions() as db:
+        assert container.matches.tick(db) is True
+    assert fixture(container) is not None
+
+
+def test_database_url_from_supabase_uses_psycopg():
+    from vaohang.models import normalize_database_url
+
+    assert normalize_database_url("postgresql://u:p@h:5432/db") == "postgresql+psycopg://u:p@h:5432/db"
+    assert normalize_database_url("postgres://u:p@h/db") == "postgresql+psycopg://u:p@h/db"
+    assert normalize_database_url("postgresql+psycopg://x") == "postgresql+psycopg://x"
+    assert normalize_database_url("sqlite:///./v.db") == "sqlite:///./v.db"
