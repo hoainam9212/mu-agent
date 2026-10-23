@@ -17,10 +17,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -76,7 +78,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 import vn.vaohang.CaveView
 import vn.vaohang.GroupDto
 import vn.vaohang.MatchDto
@@ -90,6 +91,7 @@ import java.time.ZoneId
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
+import kotlinx.coroutines.delay
 
 /** Thời gian lửa cháy sau mỗi trận không thắng (LIGHT_MINUTES trên máy chủ). */
 private const val FIRE_MINUTES = 30
@@ -249,7 +251,7 @@ fun OnboardingScreen(busy: Boolean, onDone: (String, Boolean, Boolean) -> Unit) 
     var measure by remember { mutableStateOf(true) }
     var daytimeWork by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding()) {
-        CaveBackdrop(fireOn = true, modifier = Modifier.fillMaxWidth().height(330.dp)) {
+        CaveBackdrop(fireOn = true, fireY = 0.73f, modifier = Modifier.fillMaxWidth().height(330.dp)) {
             CampScene(DemoCrew, meId = 0, burning = true, height = 290.dp, modifier = Modifier.align(Alignment.BottomCenter))
         }
         Column(
@@ -513,6 +515,42 @@ private fun FireOutPanel() {
     }
 }
 
+/** Độ cao (tỉ lệ màn hình) của đống lửa trên nền hang. */
+private const val FIRE_Y = 0.6f
+private val SceneHeight = 330.dp
+
+/** Câu vỗ vai gần nhất của mỗi người (tối đa 3 người), để hiện thành bong bóng trên đầu họ. */
+private fun recentSayings(cave: CaveView): Map<Long, String> {
+    val idByName = cave.inside.associate { it.nickname to it.id }
+    val latest = LinkedHashMap<Long, String>()
+    cave.pats.asReversed().forEach { p ->
+        val id = idByName[p.from] ?: return@forEach
+        if (id !in latest && latest.size < 3) latest[id] = p.text
+    }
+    return latest
+}
+
+@Composable
+private fun ChoiceSheet(cave: CaveView, onPick: (Long) -> Unit, onClose: () -> Unit) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)).clickable(onClick = onClose)) {
+        Column(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+                .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(Rock)
+                // Chặn chạm xuyên xuống lớp nền (chạm nền là đóng).
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                .navigationBarsPadding().padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Box(Modifier.align(Alignment.CenterHorizontally).size(40.dp, 4.dp).clip(RoundedCornerShape(50)).background(RockEdge))
+            cave.choices.forEach { c -> PatChoice(c.text) { onPick(c.id) } }
+            if (cave.pats.isNotEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                cave.pats.asReversed().forEach { PatBubble(it.from, it.text) }
+            }
+        }
+    }
+}
+
 @Composable
 fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, actions: UiActions) {
     val context = LocalContext.current
@@ -522,7 +560,8 @@ fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, actions: UiAction
         window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
     }
-    BackHandler(onBack = actions::home)
+    var choosing by remember { mutableStateOf(false) }
+    BackHandler { if (choosing) choosing = false else actions.home() }
     // Tải lại đều đặn để thấy anh em mới vào và câu vỗ vai mới.
     LaunchedEffect(cave.id) {
         while (true) {
@@ -532,33 +571,50 @@ fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, actions: UiAction
     }
     val open = cave.status == "OPEN"
     val burning = open && cave.lights.on
-    CaveBackdrop(fireOn = burning) {
-        Column(
-            Modifier.fillMaxSize().systemBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            TextButton(onClick = actions::home) { Text("‹  ${groupName ?: "Hội anh em"}", color = Mute, fontSize = 15.sp) }
-            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                cave.score?.let { ScoreBoard(it) }
-            }
-            if (burning) FireTimer(cave.lights.until, onExpired = { actions.refreshCaveQuietly(cave.id) })
-            CampScene(cave.inside, meId, burning)
-            when {
-                !open -> {}
-                !cave.meInside -> {
-                    FireButton("🔥  Vào hang", onClick = { actions.enterCave(cave.id) }, pulse = true, modifier = Modifier.fillMaxWidth())
+    CaveBackdrop(fireOn = burning, fireY = FIRE_Y) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            // Sân khấu: đống lửa đặt đúng vệt sáng trên nền hang, cả hội ngồi quanh.
+            val fireBase = maxHeight * FIRE_Y
+            CampScene(
+                cave.inside, meId, burning, said = if (burning) recentSayings(cave) else emptyMap(),
+                height = SceneHeight,
+                modifier = Modifier.align(Alignment.TopCenter)
+                    .offset(y = fireBase - SceneHeight / 2 - SceneHeight * 0.19f),
+            )
+            Column(
+                Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                TextButton(onClick = actions::home) { Text("‹  ${groupName ?: "Hội anh em"}", color = Ink.copy(alpha = 0.8f), fontSize = 15.sp) }
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    cave.score?.let { ScoreBoard(it) }
                 }
-                else -> {
-                    if (!burning) FireOutPanel()
-                    cave.pats.forEach { PatBubble(it.from, it.text) }
-                    if (burning) cave.choices.forEach { c -> PatChoice(c.text) { actions.pat(cave.id, c.id) } }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        if (burning) GhostButton("📣  Rủ anh em", onClick = { actions.invite(cave.id) }, modifier = Modifier.weight(1f))
-                        GhostButton("🚪  Ra hang", onClick = { actions.leaveCave(cave.id) }, color = Mute, modifier = Modifier.weight(1f))
+                if (burning) FireTimer(cave.lights.until, onExpired = { actions.refreshCaveQuietly(cave.id) })
+            }
+            Column(
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                when {
+                    !open -> {}
+                    !cave.meInside ->
+                        FireButton("🔥  Vào hang", onClick = { actions.enterCave(cave.id) }, pulse = true, modifier = Modifier.fillMaxWidth())
+                    burning -> {
+                        FireButton("👋  Vỗ vai", onClick = { choosing = true }, pulse = cave.pats.isEmpty(), modifier = Modifier.fillMaxWidth())
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            GhostButton("📣  Rủ anh em", onClick = { actions.invite(cave.id) }, modifier = Modifier.weight(1f))
+                            GhostButton("🚪  Ra hang", onClick = { actions.leaveCave(cave.id) }, color = Mute, modifier = Modifier.weight(1f))
+                        }
+                    }
+                    else -> {
+                        FireOutPanel()
+                        GhostButton("🚪  Ra hang", onClick = { actions.leaveCave(cave.id) }, color = Mute, modifier = Modifier.fillMaxWidth())
                     }
                 }
             }
-            Spacer(Modifier.height(16.dp))
+            if (choosing && burning) {
+                ChoiceSheet(cave, onPick = { id -> actions.pat(cave.id, id); choosing = false }, onClose = { choosing = false })
+            }
         }
     }
 }

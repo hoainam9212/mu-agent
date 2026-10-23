@@ -9,6 +9,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
@@ -19,6 +20,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,11 +29,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -38,121 +44,81 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import vn.vaohang.Member
+import vn.vaohang.R
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 
 // ---- Nền hang ------------------------------------------------------------------------------
 
-private val RockDeep = Color(0xFF120E0B)
-private val RockLit = Color(0xFF6A4A33)
+// Vị trí vệt sáng trên ảnh nền (đo từ ảnh): đống lửa đặt đúng chỗ này.
+private const val GLOW_X = 0.524f
+private const val GLOW_Y = 0.755f
+private val FloorLit = Color(0xFF34261C)
+private val FloorDark = Color(0xFF181D22)
 
-// Độ dài nhũ đá trên trần hang (tỉ lệ theo bề ngang màn hình).
-private val STALACTITES = floatArrayOf(0.07f, 0.16f, 0.05f, 0.11f, 0.20f, 0.06f, 0.13f, 0.04f, 0.18f, 0.08f, 0.14f, 0.05f)
-
-// Độ lởm chởm của mép vách hang và hình dạng từng tảng đá (bảng số cố định để hình không nhảy).
-private val JAG = floatArrayOf(0.9f, -0.4f, 0.3f, -1f, 0.6f, -0.2f, 1f, -0.7f, 0.1f, -0.5f, 0.8f, -0.9f, 0.4f, -0.1f)
-private val ROCK = floatArrayOf(1f, 0.82f, 0.95f, 0.78f, 1.05f, 0.88f, 0.92f)
-
-private fun rockPath(c: Offset, r: Float, seed: Int) = Path().apply {
-    val n = ROCK.size
-    for (i in 0 until n) {
-        val t = 2 * PI * i / n + seed * 0.7
-        val k = ROCK[(i + seed) % n] * r
-        val p = Offset(c.x + cos(t).toFloat() * k, c.y + sin(t).toFloat() * k * 0.8f)
-        if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y)
-    }
-    close()
-}
-
-private fun DrawScope.drawCave(lit: Float, flicker: Float) {
-    val w = size.width
-    val h = size.height
-    val fire = Offset(w / 2, h * 0.47f)
-    // Lòng hang: hình vòm lởm chởm, ngoài vòm là đá đặc.
-    val cx = w / 2
-    val cy = h * 0.56f
-    val rx = w * 0.47f
-    val ry = h * 0.62f
-    val n = 56
-    fun rim(i: Int, extra: Float = 0f): Offset {
-        val t = 2 * PI * i / n
-        val k = 1f + JAG[i % JAG.size] * 0.05f + extra
-        return Offset(cx + cos(t).toFloat() * rx * k, cy + sin(t).toFloat() * ry * k)
-    }
-    val chamber = Path().apply {
-        for (i in 0..n) rim(i).let { if (i == 0) moveTo(it.x, it.y) else lineTo(it.x, it.y) }
-        close()
-    }
-    drawRect(RockDeep)
-    drawPath(
-        chamber,
-        Brush.radialGradient(listOf(lerp(CaveDeep, Color(0xFF3A2418), lit), CaveDeep, CaveBlack), center = fire, radius = h * 0.6f),
-    )
-    // Ánh lửa hắt lên vách và trần.
-    drawCircle(
-        Brush.radialGradient(
-            listOf(Ember.copy(alpha = 0.32f * lit * flicker), MuRed.copy(alpha = 0.08f * lit), Color.Transparent),
-            center = fire, radius = h * 0.55f,
-        ),
-        radius = h * 0.55f, center = fire,
-    )
-    // Các tảng đá quanh mép vách: mặt quay về đống lửa được hắt sáng.
-    for (i in 0 until n step 2) {
-        val c = rim(i, 0.02f)
-        val r = w * (0.07f + 0.03f * ((JAG[(i * 3) % JAG.size] + 1) / 2))
-        val toFire = Offset(fire.x - c.x, fire.y - c.y)
-        val d = toFire.getDistance().coerceAtLeast(1f)
-        val near = (1f - d / (h * 0.75f)).coerceIn(0f, 1f)
-        drawPath(rockPath(c, r, i), lerp(Rock, RockLight, 0.5f))
-        val litFace = c + toFire * (r * 0.28f / d)
-        drawPath(rockPath(litFace, r * 0.62f, i + 1), lerp(RockLight, RockLit, lit * near * flicker).copy(alpha = 0.9f))
-    }
-    // Nhũ đá trên trần, đầu nhũ ửng lửa.
-    val step = w / STALACTITES.size
-    STALACTITES.forEachIndexed { i, len ->
-        val x = i * step
-        val tip = Offset(x + step * 0.5f, len * w * 0.6f)
-        val drip = Path().apply {
-            moveTo(x + step * 0.15f, 0f)
-            lineTo(tip.x, tip.y)
-            lineTo(x + step * 0.85f, 0f)
-            close()
-        }
-        drawPath(drip, Rock)
-        drawCircle(RockLit.copy(alpha = 0.6f * lit), w * 0.008f, tip)
-    }
-    // Măng đá dưới nền hai bên.
-    for ((fx, hgt) in listOf(0.08f to 0.10f, 0.16f to 0.06f, 0.86f to 0.09f, 0.93f to 0.12f)) {
-        val base = h
-        val spike = Path().apply {
-            moveTo(w * (fx - 0.05f), base)
-            lineTo(w * fx, base - h * hgt)
-            lineTo(w * (fx + 0.05f), base)
-            close()
-        }
-        drawPath(spike, Rock)
-    }
-}
-
-/** Nền hang: vòm đá lởm chởm, nhũ đá trên trần, măng đá dưới nền; hắt ánh lửa khi lửa còn cháy. */
+/**
+ * Nền hang đất nặn: ảnh hang sáng lửa và ảnh hang tối, chuyển dần theo lửa.
+ * Ảnh được kéo sao cho vệt sáng trên nền đất nằm ở [fireY] (tỉ lệ chiều cao màn hình);
+ * phần dưới còn trống tô màu nền đất cho liền.
+ */
 @Composable
-fun CaveBackdrop(fireOn: Boolean, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+fun CaveBackdrop(fireOn: Boolean, modifier: Modifier = Modifier, fireY: Float = 0.62f, content: @Composable BoxScope.() -> Unit) {
+    val litImage = ImageBitmap.imageResource(R.drawable.cave_lit)
+    val darkImage = ImageBitmap.imageResource(R.drawable.cave_dark)
     val flicker by rememberInfiniteTransition(label = "torch").animateFloat(
         initialValue = 0.78f, targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(700, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "flicker",
     )
     val lit by animateFloatAsState(if (fireOn) 1f else 0f, tween(2000), label = "lit")
-    Box(modifier.fillMaxSize().drawBehind { drawCave(lit, flicker) }, content = content)
+    Box(
+        modifier.fillMaxSize().drawBehind {
+            val iw = litImage.width.toFloat()
+            val ih = litImage.height.toFloat()
+            val s = maxOf(size.width / iw, size.height / ih)
+            val dw = iw * s
+            val dh = ih * s
+            val dx = (size.width / 2 - GLOW_X * dw).coerceIn(size.width - dw, 0f)
+            val dy = minOf(fireY * size.height - GLOW_Y * dh, 0f)
+            val floor = lerp(FloorDark, FloorLit, lit)
+            drawRect(floor)
+            val at = IntOffset(dx.roundToInt(), dy.roundToInt())
+            val sz = IntSize(dw.roundToInt(), dh.roundToInt())
+            drawImage(darkImage, dstOffset = at, dstSize = sz, filterQuality = FilterQuality.Medium)
+            if (lit > 0.01f) drawImage(litImage, dstOffset = at, dstSize = sz, alpha = lit, filterQuality = FilterQuality.Medium)
+            val bottom = dy + dh
+            if (bottom < size.height) {
+                drawRect(
+                    Brush.verticalGradient(listOf(Color.Transparent, floor), startY = bottom - 160f, endY = bottom),
+                    topLeft = Offset(0f, bottom - 160f), size = Size(size.width, 161f),
+                )
+            }
+            // Ánh lửa bập bùng hắt lên vách.
+            val fire = Offset(size.width / 2, fireY * size.height)
+            drawCircle(
+                Brush.radialGradient(listOf(Ember.copy(alpha = 0.22f * lit * flicker), Color.Transparent), center = fire, radius = size.width * 0.9f),
+                radius = size.width * 0.9f, center = fire,
+            )
+            // Tối hai mép trên/dưới cho chữ và nút dễ đọc.
+            drawRect(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent), endY = size.height * 0.2f))
+            drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f)), startY = size.height * 0.78f))
+        },
+        content = content,
+    )
 }
 
 // ---- Đống lửa ------------------------------------------------------------------------------
@@ -373,7 +339,14 @@ private val Dirt = Color(0xFF2A1C12)
  * Người phía sau lửa vẽ trước, người phía trước vẽ đè lên.
  */
 @Composable
-fun CampScene(people: List<Member>, meId: Long, burning: Boolean, modifier: Modifier = Modifier, height: Dp = 330.dp) {
+fun CampScene(
+    people: List<Member>,
+    meId: Long,
+    burning: Boolean,
+    modifier: Modifier = Modifier,
+    height: Dp = 330.dp,
+    said: Map<Long, String> = emptyMap(),
+) {
     val lit by animateFloatAsState(if (burning) 1f else 0f, tween(2500), label = "ground")
     val n = people.size
     // Số người chẵn thì xoay nửa bước, để không ai ngồi chắn ngay trước đống lửa.
@@ -437,6 +410,17 @@ fun CampScene(people: List<Member>, meId: Long, burning: Boolean, modifier: Modi
             )
         }
         Campfire(burning, Modifier.size(height * 0.4f).offset(y = height * 0.07f).zIndex(0f))
+        // Câu vỗ vai hiện thành bong bóng ngay trên đầu người nói.
+        seats.forEach { (m, x, y) ->
+            val text = said[m.id] ?: return@forEach
+            val bx = x.coerceIn(-95f, 95f)
+            Text(
+                text, color = CaveBlack, fontSize = 12.sp, lineHeight = 15.sp, textAlign = TextAlign.Center, maxLines = 3,
+                modifier = Modifier.offset(bx.dp, (y - avatar.value * 1.05f - 22f).dp).zIndex(2000f)
+                    .widthIn(max = 170.dp).clip(RoundedCornerShape(14.dp)).background(Ink.copy(alpha = 0.95f))
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+            )
+        }
     }
 }
 
