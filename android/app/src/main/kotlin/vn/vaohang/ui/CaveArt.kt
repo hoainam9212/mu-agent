@@ -343,13 +343,14 @@ fun CampScene(
     height: Dp = 330.dp,
     said: Map<Long, String> = emptyMap(),
     onFloor: ((Float, Float) -> Boolean)? = null,
+    avatarScale: Float = 1f,
 ) {
     val lit by animateFloatAsState(if (burning) 1f else 0f, tween(2500), label = "ground")
     val n = people.size
     // Số người chẵn thì xoay nửa bước, để không ai ngồi chắn ngay trước đống lửa.
     val start = -PI / 2 + if (n % 2 == 0 && n > 0) PI / n else 0.0
     // Đông người thì nhân vật nhỏ lại và vòng ngồi rộng ra (tối đa 10 người một hội).
-    val avatar = when {
+    val avatar = avatarScale * when {
         n <= 5 -> 84f
         n <= 7 -> 70f
         else -> 58f
@@ -385,18 +386,19 @@ fun CampScene(
         }
     } else {
         // Lửa tắt: lăn ra ngủ cạnh nhau thành hàng quanh đống than, lệch và nghiêng một chút cho tự nhiên.
-        val w = if (n <= 6) 64f else 54f
+        val w = avatarScale * if (n <= 6) 64f else 54f
         val perRow = 3
-        val rows = listOf(84f, -50f, 128f) // hàng trước, hàng sau lửa, hàng trước nữa (so với gốc lửa)
+        val rows = listOf(100f, -50f, 140f) // hàng trước, hàng sau lửa, hàng trước nữa (so với gốc lửa)
         people.mapIndexed { i, m ->
             val row = minOf(i / perRow, rows.lastIndex)
             val inRow = people.size.let { total -> minOf(perRow, total - row * perRow).coerceAtLeast(1) }
             val col = i - row * perRow
             val (boxW, boxH) = cavemanBox(m.id, w.dp, true)
             val jitter = Random(m.id)
-            // Hàng sau lệch nửa chỗ để không ai nằm ngay sau đống lửa.
-            val shift = if (row == 1) 0.5f else 0f
-            val x = (col - (inRow - 1) / 2f + shift) * (boxW.value * 0.92f) + (jitter.nextFloat() - 0.5f) * 18f
+            val spacing = boxW.value * 0.92f
+            // Hàng sau: xếp lần lượt hai bên đống lửa, không ai nằm ngay sau lửa.
+            val slot = if (row == 1) (if (col % 2 == 0) -1f else 1f) * (0.8f + col / 2) else col - (inRow - 1) / 2f
+            val x = slot * spacing + (jitter.nextFloat() - 0.5f) * 18f
             val feetY = fireBase + rows[row] + (jitter.nextFloat() - 0.5f) * 10f
             val depth = rows[row] / 100f
             Seat(m, x, feetY, feetY - boxH.value / 2, w, depth, tilt = (jitter.nextFloat() - 0.5f) * 14f)

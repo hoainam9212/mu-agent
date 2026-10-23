@@ -293,7 +293,7 @@ fun OnboardingScreen(busy: Boolean, onDone: (String, Boolean, Boolean) -> Unit) 
     CaveBackdrop(fireOn = true, fireY = 0.31f) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding()) {
         Box(Modifier.fillMaxWidth().height(330.dp)) {
-            CampScene(DemoCrew, meId = 0, burning = true, height = 290.dp, modifier = Modifier.align(Alignment.BottomCenter))
+            CampScene(DemoCrew, meId = 0, burning = true, height = 290.dp, avatarScale = 0.72f, modifier = Modifier.align(Alignment.BottomCenter))
         }
         Column(
             Modifier.padding(horizontal = 24.dp).navigationBarsPadding(),
