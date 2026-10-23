@@ -132,3 +132,7 @@ def test_database_url_from_supabase_uses_psycopg():
     assert normalize_database_url("postgres://u:p@h/db") == "postgresql+psycopg://u:p@h/db"
     assert normalize_database_url("postgresql+psycopg://x") == "postgresql+psycopg://x"
     assert normalize_database_url("sqlite:///./v.db") == "sqlite:///./v.db"
+
+
+def test_health_on_path_cloud_run_does_not_reserve(client):
+    assert client.get("/health").json()["ok"] is True

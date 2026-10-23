@@ -107,6 +107,8 @@ def create_app(container: Container | None = None) -> FastAPI:
     app.include_router(router)
     app.include_router(admin)
 
+    # Cloud Run giữ riêng một số đường dẫn tận cùng bằng "z" (như /healthz) → dùng /health.
+    @app.get("/health")
     @app.get("/healthz")
     def healthz():
         return {"ok": True, "provider": container.provider.name}

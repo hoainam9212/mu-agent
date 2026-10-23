@@ -77,13 +77,13 @@ JOB=(--location "$REGION" --schedule "* * * * *" --time-zone "Etc/UTC" --uri "$U
 gcloud scheduler jobs delete vaohang-tick --location "$REGION" --quiet >/dev/null 2>&1 || true
 gcloud scheduler jobs create http vaohang-tick "${JOB[@]}" --quiet >/dev/null
 
-echo "== Kiểm tra"
-curl -fsS "$URL/healthz"; echo
-curl -fsS -X POST -H "X-Admin-Token: $ADMIN_TOKEN" "$URL/v1/admin/tick"; echo
-curl -fsS -H "X-Admin-Token: $ADMIN_TOKEN" "$URL/v1/admin/status"; echo
-
 cat <<EOF
 
-Xong. Máy chủ: $URL
+Máy chủ: $URL
 ADMIN_TOKEN (giữ riêng, dùng cho lệnh của người trực): $ADMIN_TOKEN
 EOF
+
+echo "== Kiểm tra"
+curl -fsS "$URL/health" && echo || echo "(chưa gọi được /health)"
+curl -fsS -X POST -H "X-Admin-Token: $ADMIN_TOKEN" "$URL/v1/admin/tick" && echo || echo "(tick lỗi)"
+curl -fsS -H "X-Admin-Token: $ADMIN_TOKEN" "$URL/v1/admin/status" && echo || echo "(status lỗi)"
