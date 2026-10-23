@@ -36,6 +36,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -50,28 +52,98 @@ import kotlin.random.Random
 
 // ---- Nền hang ------------------------------------------------------------------------------
 
+private val RockDeep = Color(0xFF120E0B)
+private val RockLit = Color(0xFF6A4A33)
+
 // Độ dài nhũ đá trên trần hang (tỉ lệ theo bề ngang màn hình).
 private val STALACTITES = floatArrayOf(0.07f, 0.16f, 0.05f, 0.11f, 0.20f, 0.06f, 0.13f, 0.04f, 0.18f, 0.08f, 0.14f, 0.05f)
 
-private fun DrawScope.drawCeiling(color: Color) {
-    val n = STALACTITES.size
-    val step = size.width / n
-    val path = Path().apply {
-        moveTo(0f, 0f)
-        for (i in 0 until n) {
-            val x = i * step
-            lineTo(x + step * 0.35f, step * 0.25f)
-            lineTo(x + step * 0.5f, STALACTITES[i] * size.width * 0.55f)
-            lineTo(x + step * 0.65f, step * 0.25f)
-            lineTo(x + step, step * 0.15f)
-        }
-        lineTo(size.width, 0f)
-        close()
+// Độ lởm chởm của mép vách hang và hình dạng từng tảng đá (bảng số cố định để hình không nhảy).
+private val JAG = floatArrayOf(0.9f, -0.4f, 0.3f, -1f, 0.6f, -0.2f, 1f, -0.7f, 0.1f, -0.5f, 0.8f, -0.9f, 0.4f, -0.1f)
+private val ROCK = floatArrayOf(1f, 0.82f, 0.95f, 0.78f, 1.05f, 0.88f, 0.92f)
+
+private fun rockPath(c: Offset, r: Float, seed: Int) = Path().apply {
+    val n = ROCK.size
+    for (i in 0 until n) {
+        val t = 2 * PI * i / n + seed * 0.7
+        val k = ROCK[(i + seed) % n] * r
+        val p = Offset(c.x + cos(t).toFloat() * k, c.y + sin(t).toFloat() * k * 0.8f)
+        if (i == 0) moveTo(p.x, p.y) else lineTo(p.x, p.y)
     }
-    drawPath(path, color)
+    close()
 }
 
-/** Nền hang: trần nhũ đá, vách tối hai bên, hắt ánh lửa khi lửa còn cháy. */
+private fun DrawScope.drawCave(lit: Float, flicker: Float) {
+    val w = size.width
+    val h = size.height
+    val fire = Offset(w / 2, h * 0.47f)
+    // Lòng hang: hình vòm lởm chởm, ngoài vòm là đá đặc.
+    val cx = w / 2
+    val cy = h * 0.56f
+    val rx = w * 0.47f
+    val ry = h * 0.62f
+    val n = 56
+    fun rim(i: Int, extra: Float = 0f): Offset {
+        val t = 2 * PI * i / n
+        val k = 1f + JAG[i % JAG.size] * 0.05f + extra
+        return Offset(cx + cos(t).toFloat() * rx * k, cy + sin(t).toFloat() * ry * k)
+    }
+    val chamber = Path().apply {
+        for (i in 0..n) rim(i).let { if (i == 0) moveTo(it.x, it.y) else lineTo(it.x, it.y) }
+        close()
+    }
+    drawRect(RockDeep)
+    drawPath(
+        chamber,
+        Brush.radialGradient(listOf(lerp(CaveDeep, Color(0xFF3A2418), lit), CaveDeep, CaveBlack), center = fire, radius = h * 0.6f),
+    )
+    // Ánh lửa hắt lên vách và trần.
+    drawCircle(
+        Brush.radialGradient(
+            listOf(Ember.copy(alpha = 0.32f * lit * flicker), MuRed.copy(alpha = 0.08f * lit), Color.Transparent),
+            center = fire, radius = h * 0.55f,
+        ),
+        radius = h * 0.55f, center = fire,
+    )
+    // Các tảng đá quanh mép vách: mặt quay về đống lửa được hắt sáng.
+    for (i in 0 until n step 2) {
+        val c = rim(i, 0.02f)
+        val r = w * (0.07f + 0.03f * ((JAG[(i * 3) % JAG.size] + 1) / 2))
+        val toFire = Offset(fire.x - c.x, fire.y - c.y)
+        val d = toFire.getDistance().coerceAtLeast(1f)
+        val near = (1f - d / (h * 0.75f)).coerceIn(0f, 1f)
+        drawPath(rockPath(c, r, i), lerp(Rock, RockLight, 0.5f))
+        val litFace = c + toFire * (r * 0.28f / d)
+        drawPath(rockPath(litFace, r * 0.62f, i + 1), lerp(RockLight, RockLit, lit * near * flicker).copy(alpha = 0.9f))
+    }
+    // Nhũ đá trên trần, đầu nhũ ửng lửa.
+    val step = w / STALACTITES.size
+    STALACTITES.forEachIndexed { i, len ->
+        val x = i * step
+        val tip = Offset(x + step * 0.5f, len * w * 0.6f)
+        val drip = Path().apply {
+            moveTo(x + step * 0.15f, 0f)
+            lineTo(tip.x, tip.y)
+            lineTo(x + step * 0.85f, 0f)
+            close()
+        }
+        drawPath(drip, Rock)
+        drawCircle(RockLit.copy(alpha = 0.6f * lit), w * 0.008f, tip)
+    }
+    // Măng đá dưới nền hai bên.
+    for ((fx, hgt) in listOf(0.08f to 0.10f, 0.16f to 0.06f, 0.86f to 0.09f, 0.93f to 0.12f)) {
+        val base = h
+        val spike = Path().apply {
+            moveTo(w * (fx - 0.05f), base)
+            lineTo(w * fx, base - h * hgt)
+            lineTo(w * (fx + 0.05f), base)
+            close()
+        }
+        drawPath(spike, Rock)
+    }
+}
+
+/** Nền hang: vòm đá lởm chởm, nhũ đá trên trần, măng đá dưới nền; hắt ánh lửa khi lửa còn cháy. */
 @Composable
 fun CaveBackdrop(fireOn: Boolean, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
     val flicker by rememberInfiniteTransition(label = "torch").animateFloat(
@@ -80,25 +152,7 @@ fun CaveBackdrop(fireOn: Boolean, modifier: Modifier = Modifier, content: @Compo
         label = "flicker",
     )
     val lit by animateFloatAsState(if (fireOn) 1f else 0f, tween(2000), label = "lit")
-    Box(
-        modifier.fillMaxSize().drawBehind {
-            drawRect(Brush.verticalGradient(listOf(CaveDeep, CaveBlack)))
-            val center = Offset(size.width / 2, size.height * 0.42f)
-            val r = size.maxDimension * 0.55f
-            drawCircle(
-                Brush.radialGradient(
-                    listOf(Ember.copy(alpha = 0.36f * lit * flicker), MuRed.copy(alpha = 0.10f * lit), Color.Transparent),
-                    center = center, radius = r,
-                ),
-                radius = r, center = center,
-            )
-            val wall = size.width * 0.22f
-            drawRect(Brush.horizontalGradient(listOf(CaveBlack, Color.Transparent), endX = wall))
-            drawRect(Brush.horizontalGradient(listOf(Color.Transparent, CaveBlack), startX = size.width - wall))
-            drawCeiling(Rock)
-        },
-        content = content,
-    )
+    Box(modifier.fillMaxSize().drawBehind { drawCave(lit, flicker) }, content = content)
 }
 
 // ---- Đống lửa ------------------------------------------------------------------------------
@@ -312,28 +366,73 @@ fun Caveman(
     }
 }
 
-/** Cả hội ngồi quanh đống lửa: người phía sau lửa vẽ trước, người phía trước vẽ đè lên. */
+private val Dirt = Color(0xFF2A1C12)
+
+/**
+ * Cả hội ngồi quanh đống lửa trên nền đất hắt sáng; mỗi người đổ bóng dài ra xa lửa.
+ * Người phía sau lửa vẽ trước, người phía trước vẽ đè lên.
+ */
 @Composable
 fun CampScene(people: List<Member>, meId: Long, burning: Boolean, modifier: Modifier = Modifier, height: Dp = 330.dp) {
+    val lit by animateFloatAsState(if (burning) 1f else 0f, tween(2500), label = "ground")
+    val n = people.size
+    // Số người chẵn thì xoay nửa bước, để không ai ngồi chắn ngay trước đống lửa.
+    val start = -PI / 2 + if (n % 2 == 0 && n > 0) PI / n else 0.0
+    // Đông người thì nhân vật nhỏ lại và vòng ngồi rộng ra (tối đa 10 người một hội).
+    val avatar = when {
+        n <= 5 -> 64.dp
+        n <= 7 -> 54.dp
+        else -> 46.dp
+    }
+    val rx = if (n <= 6) 118.0 else 132.0
+    val ry = height.value * (if (n <= 6) 0.27 else 0.31)
+    val seats = people.mapIndexed { i, m ->
+        val angle = start + 2 * PI * i / n
+        Triple(m, (cos(angle) * rx).toFloat(), (sin(angle) * ry + 6).toFloat())
+    }
     Box(modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
-        val n = people.size
-        // Số người chẵn thì xoay nửa bước, để không ai ngồi chắn ngay trước đống lửa.
-        val start = -PI / 2 + if (n % 2 == 0 && n > 0) PI / n else 0.0
-        // Đông người thì nhân vật nhỏ lại và vòng ngồi rộng ra (tối đa 10 người một hội).
-        val avatar = when {
-            n <= 5 -> 64.dp
-            n <= 7 -> 54.dp
-            else -> 46.dp
+        Canvas(Modifier.matchParentSize().zIndex(-1000f)) {
+            val fire = center + Offset(0f, height.toPx() * 0.19f)
+            // Nền đất: vùng sáng cam quanh lửa (lửa tắt thì chỉ còn đất tối).
+            val gx = (rx.toFloat() + 85f).dp.toPx()
+            val gy = (ry.toFloat() + 45f).dp.toPx()
+            scale(1f, gy / gx, pivot = fire) {
+                drawCircle(
+                    Brush.radialGradient(
+                        listOf(
+                            lerp(Dirt, Gold, 0.55f * lit).copy(alpha = 0.9f),
+                            lerp(Dirt, Ember, 0.6f * lit).copy(alpha = 0.6f),
+                            Color.Transparent,
+                        ),
+                        center = fire, radius = gx,
+                    ),
+                    radius = gx, center = fire,
+                )
+            }
+            // Bóng đổ dài ra xa đống lửa.
+            if (lit > 0.01f) {
+                seats.forEach { (_, x, y) ->
+                    val feet = center + Offset(x.dp.toPx(), (y + avatar.value * 0.45f).dp.toPx())
+                    val dir = feet - fire
+                    val u = dir / dir.getDistance().coerceAtLeast(1f)
+                    val perp = Offset(-u.y, u.x)
+                    val half = avatar.toPx() * 0.28f
+                    val end = feet + u * (avatar.toPx() * 1.5f)
+                    val shadow = Path().apply {
+                        (feet + perp * half).let { moveTo(it.x, it.y) }
+                        (end + perp * (half * 0.5f)).let { lineTo(it.x, it.y) }
+                        (end - perp * (half * 0.5f)).let { lineTo(it.x, it.y) }
+                        (feet - perp * half).let { lineTo(it.x, it.y) }
+                        close()
+                    }
+                    drawPath(shadow, Brush.linearGradient(listOf(Color.Black.copy(alpha = 0.55f * lit), Color.Transparent), start = feet, end = end))
+                }
+            }
         }
-        val rx = if (n <= 6) 118.0 else 132.0
-        val ry = height.value * (if (n <= 6) 0.27 else 0.31)
-        people.forEachIndexed { i, m ->
-            val angle = start + 2 * PI * i / n
-            val x = cos(angle) * rx
-            val y = sin(angle) * ry + 6
+        seats.forEach { (m, x, y) ->
             Caveman(
                 m.nickname, m.id, width = avatar, me = m.id == meId, asleep = !burning,
-                modifier = Modifier.offset(x.dp, y.dp).zIndex(y.toFloat()),
+                modifier = Modifier.offset(x.dp, y.dp).zIndex(y),
             )
         }
         Campfire(burning, Modifier.size(height * 0.4f).offset(y = height * 0.07f).zIndex(0f))
