@@ -272,8 +272,8 @@ fun OnboardingScreen(busy: Boolean, onDone: (String, Boolean, Boolean) -> Unit) 
                 RuleBadge("📵", "Không chụp", Modifier.weight(1f))
                 RuleBadge("🙅", "Không chê", Modifier.weight(1f))
             }
-            ConsentRow("😴 Đo giấc ngủ ẩn danh", "50 phút sau trận", measure) { measure = it }
-            ConsentRow("💼 Đi làm 8:00–18:00", "Giờ đó để tối báo", daytimeWork) { daytimeWork = it }
+            ConsentRow("🔥 Lửa tắt là tắt máy", "Hang đếm xem anh em có đi ngủ sớm không · không ghi tên", measure) { measure = it }
+            ConsentRow("💼 Ban ngày đi làm", "8:00–18:00 hang không gọi, tối mới báo", daytimeWork) { daytimeWork = it }
             FireButton(
                 "🔥  Vào hang", onClick = { onDone(nickname, measure, daytimeWork) },
                 enabled = nickname.isNotBlank() && !busy, modifier = Modifier.fillMaxWidth(),
