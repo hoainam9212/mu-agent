@@ -31,7 +31,7 @@ import java.io.File
 // Ảnh vuông kiểu Instagram: dựng ở khung 400dp (gần bằng bề ngang điện thoại, cảnh hang giữ đúng tỉ lệ), lưu ra 1080px.
 private val SquareSide = 400.dp
 private const val SQUARE_PX = 1080
-private const val SQUARE_FIRE_Y = 0.6f
+private const val SQUARE_FIRE_Y = 0.62f
 private val SquareScene = 330.dp
 
 /**

@@ -610,7 +610,7 @@ private fun SquareSheet(people: List<Member>, burning: Boolean, onClose: () -> U
     val layer = rememberGraphicsLayer()
     var saved by remember { mutableStateOf(false) }
     Box(
-        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.75f)).clickable(onClick = onClose),
+        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.88f)).clickable(onClick = onClose),
         contentAlignment = Alignment.Center,
     ) {
         Column(

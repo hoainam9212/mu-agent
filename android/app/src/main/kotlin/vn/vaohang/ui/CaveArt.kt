@@ -405,22 +405,30 @@ fun CampScene(
         }
     } else {
         // Lửa tắt: lăn ra ngủ cạnh nhau thành hàng quanh đống than, lệch và nghiêng một chút cho tự nhiên.
-        val w = avatarScale * if (n <= 6) 64f else 54f
-        val perRow = 3
-        val rows = listOf(100f, -50f, 140f) // hàng trước, hàng sau lửa, hàng trước nữa (so với gốc lửa)
+        val w = avatarScale * if (n <= 6) 64f else 52f
+        // Các hàng (độ cao so với gốc lửa, số chỗ): hàng trước, hàng sau lửa, rồi hàng trước nữa.
+        // Đông người (7–10) thì thêm hàng hai bên đống than, để không ai nằm đè lên ai.
+        val rows = if (n <= 6) listOf(100f to 3, -50f to 3, 140f to 3) else listOf(95f to 3, -50f to 2, 20f to 2, 140f to 3)
+        val rowOf = buildList { rows.forEachIndexed { r, (_, cap) -> repeat(cap) { add(r) } } }
         people.mapIndexed { i, m ->
-            val row = minOf(i / perRow, rows.lastIndex)
-            val inRow = people.size.let { total -> minOf(perRow, total - row * perRow).coerceAtLeast(1) }
-            val col = i - row * perRow
+            val row = rowOf.getOrElse(i) { rows.lastIndex }
+            val first = rowOf.indexOf(row)
+            val inRow = minOf(rows[row].second, n - first).coerceAtLeast(1)
+            val col = i - first
             val (boxW, boxH) = cavemanBox(m.id, w.dp, true)
             val jitter = Random(m.id)
             val spacing = boxW.value * 0.92f
-            // Hàng sau: xếp lần lượt hai bên đống lửa, không ai nằm ngay sau lửa.
-            val slot = if (row == 1) (if (col % 2 == 0) -1f else 1f) * (0.8f + col / 2) else col - (inRow - 1) / 2f
+            val dy = rows[row].first
+            val slot = when {
+                // Hàng sau: xếp lần lượt hai bên đống lửa, không ai nằm ngay sau lửa.
+                dy < 0f -> (if (col % 2 == 0) -1f else 1f) * (0.8f + col / 2)
+                // Hàng ngang lửa: mỗi bên một người, sát mép đống than.
+                dy == 20f -> (if (col % 2 == 0) -1f else 1f) * 1.35f
+                else -> col - (inRow - 1) / 2f
+            }
             val x = slot * spacing + (jitter.nextFloat() - 0.5f) * 18f
-            val feetY = fireBase + rows[row] + (jitter.nextFloat() - 0.5f) * 10f
-            val depth = rows[row] / 100f
-            Seat(m, x, feetY, feetY - boxH.value / 2, w, depth, tilt = (jitter.nextFloat() - 0.5f) * 14f)
+            val feetY = fireBase + dy + (jitter.nextFloat() - 0.5f) * 10f
+            Seat(m, x, feetY, feetY - boxH.value / 2, w, dy / 100f, tilt = (jitter.nextFloat() - 0.5f) * 14f)
         }
     }).map(::onGround).map { if (burning && it.member.id in said) it.copy(toasting = true) else it }
     Box(modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
