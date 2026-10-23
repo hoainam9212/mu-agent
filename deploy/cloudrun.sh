@@ -10,7 +10,7 @@
 set -euo pipefail
 
 PROJECT="${1:-$(gcloud config get-value project 2>/dev/null)}"
-REGION="${REGION:-asia-southeast1}"
+REGION="${REGION:-asia-northeast1}"  # Tokyo
 SERVICE=vaohang
 RUN_SA="vaohang-run@${PROJECT}.iam.gserviceaccount.com"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
