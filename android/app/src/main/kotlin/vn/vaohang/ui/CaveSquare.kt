@@ -43,7 +43,7 @@ private val SquareScene = 330.dp
 
 // Ảnh Gemini (trong assets/square/): vẽ sẵn cả cảnh (`square_lit_N`, `square_sleep_N`) cho hội đông, khó nhận ra ai với ai.
 // Hội nhỏ thì Gemini chỉ vẽ nền (`square_bg_lit`, `square_bg_out`), app xếp đúng nhân vật của từng người vào;
-// có ảnh vẽ sẵn thì người dùng đổi qua lại được (ảnh vẽ sẵn vui hơn nhưng nhân vật không khớp từng người).
+// có ảnh vẽ sẵn thì thỉnh thoảng dùng ảnh đó (vui hơn nhưng nhân vật không khớp từng người).
 private const val FULL_SCENE_FROM = 7
 
 // Gốc đống lửa trên ảnh nền vuông (tỉ lệ x, y) và vùng sàn ngồi/nằm được. Đo lại khi có ảnh nền thật.
@@ -58,7 +58,7 @@ private fun squareArt(context: Context, name: String): ImageBitmap? = runCatchin
 
 private fun sceneName(n: Int, burning: Boolean) = "square_${if (burning) "lit" else "sleep"}_$n"
 
-/** Hội nhỏ có ảnh vẽ sẵn cả cảnh: cho đổi qua lại giữa ảnh đó và cảnh nhân vật thật. */
+/** Hội nhỏ có ảnh vẽ sẵn cả cảnh: được chọn ngẫu nhiên giữa ảnh đó và cảnh nhân vật thật. */
 fun canSwitchSquare(context: Context, n: Int, burning: Boolean): Boolean =
     n < FULL_SCENE_FROM && runCatching { context.assets.open("square/${sceneName(n, burning)}.webp").close() }.isSuccess
 

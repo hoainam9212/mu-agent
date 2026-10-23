@@ -611,8 +611,8 @@ private fun SquareSheet(people: List<Member>, burning: Boolean, onClose: () -> U
     val layer = rememberGraphicsLayer()
     var saved by remember { mutableStateOf(false) }
     val canSwitch = remember(people.size, burning) { canSwitchSquare(context, people.size, burning) }
-    // Hội nhỏ có ảnh vẽ sẵn: lần mở nào cũng chọn ngẫu nhiên một kiểu, chạm ảnh để đổi.
-    var painted by remember { mutableStateOf(Random.nextBoolean()) }
+    // Hội nhỏ có ảnh vẽ sẵn: mỗi lần mở chọn ngẫu nhiên ảnh vẽ sẵn hoặc cảnh nhân vật thật.
+    val painted = remember { Random.nextBoolean() }
     Box(
         Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.88f)).clickable(onClick = onClose),
         contentAlignment = Alignment.Center,
@@ -625,12 +625,8 @@ private fun SquareSheet(people: List<Member>, burning: Boolean, onClose: () -> U
         ) {
             FittedCaveSquare(
                 people, burning, layer = layer, painted = canSwitch && painted,
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp))
-                    .clickable(enabled = canSwitch) { painted = !painted; saved = false },
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)),
             )
-            if (canSwitch) {
-                Text("Chạm vào ảnh để đổi kiểu khác", color = Mute, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (canSaveSquare) {
                     GhostButton(
