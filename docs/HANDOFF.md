@@ -15,6 +15,12 @@
 - Trận thật kế tiếp sau đó: MU–Roma 3/11/2026 20:00 GMT (pilot).
 - Sau pilot (từ 5/11): bản web cho anh em iPhone, kế hoạch ở `docs/PLAN.md` §9.
 
+## Đang làm (23/10 tối): ảnh hang vuông để chia sẻ
+- Code đã xong (nút "📸 Ảnh hang", xem trước, lưu / chia sẻ; `ui/CaveSquare.kt`), cảnh ghép từ lớp; đã sửa vòng ngồi và bóng.
+  Các commit đều `[skip ci]`: **chưa build APK**, chủ dự án muốn duyệt ảnh trước.
+- Chủ dự án chọn: **ngủ theo cả hội** (lửa tắt = cả hội ngủ), và muốn ảnh vuông **do Gemini vẽ**: 20 ảnh, xem `docs/ART_HANDOFF.md` mục 10.
+- Chưa chốt: chữ trên nút ("📸 Ảnh hang", "⬇ Lưu vào máy" / "✓ Đã lưu", "📤 Chia sẻ").
+
 ## Lệnh cho người trực (chạy trong Cloud Shell)
 Token lấy thẳng từ Cloud Run, không dán tay, không in ra:
 ```bash

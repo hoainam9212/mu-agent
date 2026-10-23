@@ -166,3 +166,45 @@ không có chữ "Zô" vẽ trong ảnh). Lưu vào `art/incoming/chibi/chars_to
 
 Ghép: `python3 -I android/tools/art/keyout.py sheet art/incoming/chibi/chars_toast.png toast --cols 3 --rows 2 --out android/app/src/main/res/drawable-nodpi`,
 rồi trong `CaveArt.kt` thay `private val ToastSprites = SitSprites` bằng mảng `R.drawable.caveman_<i>_toast`.
+
+## 10. Bổ sung (23/10): ảnh hang vuông để chia sẻ (20 ảnh)
+
+App có nút **"📸 Ảnh hang"**: xuất một ảnh vuông kiểu Instagram, cảnh cả hội trong hang, **không tên, không chữ**.
+Chủ dự án muốn ảnh này do Gemini vẽ (thay cho ảnh ghép từ lớp). Cần **20 ảnh vuông 1:1**: mỗi cỡ hội từ 1 đến 10 người,
+mỗi cỡ một bản **lửa cháy** (ngồi quanh lửa) và một bản **lửa tắt** (cả hội ngủ). App chọn ảnh theo số người trong hang.
+
+Cách làm:
+1. Mở **một cuộc trò chuyện Gemini mới**, tạo cả 20 ảnh trong cùng cuộc đó.
+2. Tin đầu tiên: tải lên ảnh mẫu phong cách `docs/ui-preview/9-squareFireBurning.jpg` (có trong repo), kèm **đoạn chung** dưới đây.
+3. Lần lượt tạo `square_lit_1` … `square_lit_10`, rồi `square_sleep_1` … `square_sleep_10`, thay `{N}` bằng số người.
+   Với 1 người, ở bản lửa cháy thay câu đầu bằng *"a single caveman sitting alone by the campfire"*.
+
+**Đoạn chung (dán một lần, kèm ảnh mẫu):**
+```
+Use the attached image only as a style reference. Chibi 2D cartoon style with thick dark outlines and soft cel shading, cozy night mood. Every image in this chat is a SQUARE 1:1 illustration of the same place: the inside of a large rocky cave at night, a flat earthen floor in the middle, rocky walls on both sides, a deep blue starry night sky visible through the cave opening at the top. The characters are adult Vietnamese cavemen with chibi proportions (big heads, big expressive eyes) but clearly grown men: bushy beards, thin mustaches, beer bellies, messy long hair, bald tops, spiky hair – every man looks different. All wear the same red soccer jersey with a white folded collar and a leopard-skin loincloth, barefoot. Absolutely no text, no letters, no numbers, no logos, no watermark. Reply "OK" and wait for my next message.
+```
+
+**Lửa cháy – `square_lit_{N}.png`:**
+```
+Square image: exactly {N} cavemen (count them: {N}) sitting cross-legged in a loose circle around a small warm campfire in the middle of the cave floor, seen from slightly above and in front. Everyone sits at the same distance from the fire and nobody blocks the fire. Sad but warm expressions; one or two raise a wooden beer mug toward the fire as if saying cheers. Warm orange firelight on the floor and the cave walls. Each man has a soft shadow right under where he sits and a soft shadow cast away from the fire. The group fills the middle of the picture with a little empty floor around it. No text.
+```
+
+**Lửa tắt, cả hội ngủ – `square_sleep_{N}.png`:**
+```
+Same cave, same {N} cavemen (exactly {N}), later that night: the fire has burned out – only charred logs, a few dim red embers and a thin wisp of smoke. Everyone has fallen asleep lying flat on the ground around the ashes, eyes closed, peaceful: one hugs a round black-and-white soccer ball, one uses a wooden club as a pillow, one snores with his mouth open. Dim cool blue moonlight, calm and quiet, soft shadows under each sleeper. Nobody is standing or sitting. No text.
+```
+
+Kiểm tra từng ảnh (không đạt thì bảo Gemini vẽ lại, nói rõ sai chỗ nào; tối đa 3 lần rồi báo chủ dự án):
+- **Đếm đúng số người** (Gemini hay đếm sai từ 7 người trở lên).
+- Ảnh vuông; không có chữ, số, logo, hình mờ.
+- Áo đỏ cổ trắng, khố da báo, chân trần; người lớn kiểu chibi, không phải trẻ con.
+- Bản lửa cháy: không ai che đống lửa, ai cũng cách lửa gần như nhau, bóng dính dưới chân (không như đang bay).
+- Bản lửa tắt: không còn ngọn lửa; không ai đứng hay ngồi.
+
+Nộp: tải ảnh độ phân giải cao nhất, đặt đúng tên, chép vào `art/incoming/square/`, rồi
+`git add art/incoming/square && git commit -m "Art: square share scenes from Gemini [skip ci]" && git push origin claude/exciting-ramanujan-mptsqi`
+(`[skip ci]`: chưa build APK, chủ dự án duyệt ảnh trước). Báo lại chủ dự án ảnh nào phải vẽ lại mấy lần.
+
+Ghép vào app (phiên Claude Code làm): thu về 1080×1080 WebP vào `drawable-nodpi/square_lit_N.webp`, `square_sleep_N.webp`;
+`CaveSquare` trong `android/app/src/main/kotlin/vn/vaohang/ui/CaveSquare.kt` chọn ảnh theo `people.size` và `burning`
+(giữ cảnh ghép lớp hiện tại làm dự phòng nếu thiếu ảnh); chạy workflow UI preview để chủ dự án duyệt trước khi build APK.
