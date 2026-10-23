@@ -78,5 +78,10 @@ class ScreensPreviewTest {
 
     @Test fun caveNotInside() = shot { CaveScreen(cave(fireOn = true, meInside = false), "Hội Tối Cổ Tokyo", 1, NoActions) }
 
+    @Test fun caveFullCrew() = shot {
+        val ten = crew + listOf(Member(6, "Phong"), Member(7, "Quân"), Member(8, "Khoa"), Member(9, "Bình"), Member(10, "Trung"))
+        CaveScreen(cave(fireOn = true).copy(inside = ten, pats = emptyList()), "Hội Tối Cổ Tokyo", 1, NoActions)
+    }
+
     @Test fun celebrate() = shot { CelebrateScreen {} }
 }

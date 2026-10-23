@@ -319,14 +319,20 @@ fun CampScene(people: List<Member>, meId: Long, burning: Boolean, modifier: Modi
         val n = people.size
         // Số người chẵn thì xoay nửa bước, để không ai ngồi chắn ngay trước đống lửa.
         val start = -PI / 2 + if (n % 2 == 0 && n > 0) PI / n else 0.0
-        val rx = 118.0
-        val ry = height.value * 0.27
+        // Đông người thì nhân vật nhỏ lại và vòng ngồi rộng ra (tối đa 10 người một hội).
+        val avatar = when {
+            n <= 5 -> 64.dp
+            n <= 7 -> 54.dp
+            else -> 46.dp
+        }
+        val rx = if (n <= 6) 118.0 else 132.0
+        val ry = height.value * (if (n <= 6) 0.27 else 0.31)
         people.forEachIndexed { i, m ->
             val angle = start + 2 * PI * i / n
             val x = cos(angle) * rx
             val y = sin(angle) * ry + 6
             Caveman(
-                m.nickname, m.id, me = m.id == meId, asleep = !burning,
+                m.nickname, m.id, width = avatar, me = m.id == meId, asleep = !burning,
                 modifier = Modifier.offset(x.dp, y.dp).zIndex(y.toFloat()),
             )
         }

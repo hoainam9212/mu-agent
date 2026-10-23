@@ -5,7 +5,7 @@ import sys
 
 from PIL import Image
 
-ORDER = ["onboarding", "home", "caveFireBurning", "caveFireOut", "caveNotInside", "celebrate"]
+ORDER = ["onboarding", "home", "caveFireBurning", "caveFireOut", "caveNotInside", "celebrate", "caveFullCrew"]
 WIDTH = 540
 
 src, out = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
