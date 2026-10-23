@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -336,7 +337,34 @@ private val Dirt = Color(0xFF2A1C12)
 
 private data class Seat(
     val member: Member, val x: Float, val feetY: Float, val centerY: Float, val width: Float, val depth: Float, val tilt: Float = 0f,
+    // Ảnh gốc quay mặt/với tay sang trái người xem; flip = quay sang phải.
+    val flip: Boolean = x < 0f,
+    val patting: Boolean = false,
 )
+
+/**
+ * Người vừa vỗ vai nhích sang ngồi sát người gần nhất, bàn tay chạm đúng vai người đó (ảnh vỗ vai:
+ * tay ở mép trái khung, nên ngồi bên phải bạn thì không lật, ngồi bên trái thì lật).
+ */
+private fun sitBesideToPat(seats: List<Seat>, patters: Set<Long>): List<Seat> {
+    val taken = mutableSetOf<Long>()
+    return seats.map { p ->
+        if (p.member.id !in patters) return@map p
+        val friend = seats
+            .filter { it.member.id != p.member.id && it.member.id !in patters && it.member.id !in taken }
+            .minByOrNull { (it.x - p.x) * (it.x - p.x) + (it.feetY - p.feetY) * (it.feetY - p.feetY) }
+            ?: return@map p.copy(patting = true)
+        taken += friend.member.id
+        val reach = friend.width * 0.3f + p.width * 0.55f
+        val onRight = p.x >= friend.x
+        val x = if (onRight) friend.x + reach else friend.x - reach
+        val feetY = friend.feetY + (p.feetY - friend.feetY) * 0.2f
+        p.copy(
+            x = x, feetY = feetY, centerY = feetY - (p.feetY - p.centerY),
+            flip = !onRight, patting = true, depth = friend.depth + 0.01f,
+        )
+    }
+}
 
 /**
  * Cả hội ngồi quanh đống lửa trên nền đất hắt sáng; mỗi người đổ bóng dài ra xa lửa.
@@ -411,7 +439,7 @@ fun CampScene(
             val depth = rows[row] / 100f
             Seat(m, x, feetY, feetY - boxH.value / 2, w, depth, tilt = (jitter.nextFloat() - 0.5f) * 14f)
         }
-    }).map(::onGround)
+    }).map(::onGround).let { placed -> if (burning) sitBesideToPat(placed, said.keys) else placed }
     Box(modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
         Canvas(Modifier.matchParentSize().zIndex(-1000f)) {
             val fire = center + Offset(0f, fireBase.dp.toPx())
@@ -453,12 +481,16 @@ fun CampScene(
         }
         seats.forEach { seat ->
             // Không hiện tên quanh lửa: hang đông thì tên đè nhau. Bạn có vầng sáng vàng.
-            // Người vừa vỗ vai: tư thế với tay, lật về phía giữa vòng (tay trong ảnh chỉ sang trái).
-            Caveman(
-                seat.member.nickname, seat.member.id, width = seat.width.dp, me = seat.member.id == meId, asleep = !burning, showName = false,
-                patting = burning && seat.member.id in said, flip = seat.x < 0f,
-                modifier = Modifier.offset(seat.x.dp, seat.centerY.dp).zIndex(seat.depth).graphicsLayer { rotationZ = seat.tilt },
-            )
+            key(seat.member.id) {
+                // Người vỗ vai trượt sang ngồi sát người bạn của mình.
+                val x by animateFloatAsState(seat.x, tween(700, easing = FastOutSlowInEasing), label = "x")
+                val y by animateFloatAsState(seat.centerY, tween(700, easing = FastOutSlowInEasing), label = "y")
+                Caveman(
+                    seat.member.nickname, seat.member.id, width = seat.width.dp, me = seat.member.id == meId, asleep = !burning, showName = false,
+                    patting = seat.patting, flip = seat.flip,
+                    modifier = Modifier.offset(x.dp, y.dp).zIndex(seat.depth).graphicsLayer { rotationZ = seat.tilt },
+                )
+            }
         }
         Campfire(burning, Modifier.size(height * 0.4f).offset(y = height * 0.1f).zIndex(0f))
         // Câu vỗ vai hiện thành bong bóng ngay trên đầu người nói.
