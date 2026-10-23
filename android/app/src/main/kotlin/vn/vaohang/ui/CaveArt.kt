@@ -400,7 +400,9 @@ fun CampScene(
             val depth = sin(angle).toFloat() // -1: phía sau lửa, 1: phía trước
             val w = avatar * (0.82f + 0.18f * (depth + 1) / 2) // người phía sau nhỏ hơn
             val (_, boxH) = cavemanBox(m.id, w.dp, false)
-            val feetY = fireBase + depth * ry
+            // Người phía trước to và thân chồm lên phía lửa, người phía sau thân hướng ra xa: lùi nửa vòng trước,
+            // kéo nửa vòng sau lại gần, để nhìn vào ai cũng cách đống lửa như nhau.
+            val feetY = fireBase + depth * ry * if (depth > 0f) 1.5f else 0.85f
             Seat(m, (cos(angle) * rx).toFloat(), feetY, feetY - boxH.value / 2, w, depth)
         }
     } else {
