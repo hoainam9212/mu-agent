@@ -51,9 +51,10 @@ class ScreenWatchService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val notification = NotificationCompat.Builder(this, VaoHangApp.CHANNEL_MEASURE)
-            .setSmallIcon(R.drawable.ic_cave)
-            .setContentTitle("Ngủ ngon, anh em")
-            .setContentText("Vào Hang đang ghi giờ bạn tắt máy (ẩn danh, tối đa 50 phút).")
+            .setSmallIcon(R.drawable.ic_stat_vaohang)
+            .setColor(Notifications.BRAND_COLOR)
+            .setContentTitle("Ngủ ngon nhé 🌙")
+            .setContentText("Đặt máy xuống là xong. Hang chỉ đếm giờ tắt máy, không ghi tên.")
             .setSilent(true)
             .build()
         val type = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0

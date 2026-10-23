@@ -4,7 +4,7 @@ import java.time.ZoneId
 
 data class Copy(val title: String, val body: String)
 
-/** Lời thông báo. Chỉ nhắc tên người đang trong hang, không điểm danh ai ở ngoài. */
+/** Lời thông báo, giọng anh em trong hang. Chỉ nhắc tên người đang trong hang, không điểm danh ai ở ngoài. */
 object NotificationCopy {
     fun names(list: List<String>): String = when (list.size) {
         0 -> ""
@@ -13,33 +13,37 @@ object NotificationCopy {
     }
 
     fun lightsOn(m: PushMessage.LightsOn, deferred: Boolean): Copy {
-        val when_ = if (deferred) "Đêm qua " else ""
+        val draw = m.result == "D"
         if (m.youInside) {
             return if (deferred) {
-                Copy("Bạn vẫn đang trong hang", "$when_${m.score}. Hang còn mở cho tới khi MU thắng.")
+                Copy("Anh em vẫn giữ lửa cho bạn", "Đêm qua ${m.score}. Hang còn đó, trận sau tính tiếp.")
+            } else if (draw) {
+                Copy("🔥 Hoà rồi, nhóm lửa lại thôi", "${m.score}. Chưa ra được hang thì Zô thêm cốc nữa.")
             } else {
-                Copy(
-                    if (m.result == "D") "Hang nhóm lửa lại" else "Hang đã nhóm lửa",
-                    "${m.score}. Anh em ngồi quanh lửa, nâng cốc Zô 30 phút.",
-                )
+                Copy("🔥 Lửa nhóm rồi, anh em ơi", "${m.score}. Ngồi xuống đây, Zô một cốc cho đỡ cay.")
             }
         }
-        val title = if (m.result == "D") "Vẫn chưa ra được hang" else "Hang đang mở"
-        val who = if (m.insideNames.isEmpty()) "Chưa ai vào hang." else "${names(m.insideNames)} đang trong hang."
-        return Copy(title, "$when_${m.score}. $who")
+        val title = if (draw) "Hoà… vẫn chưa ra được hang" else "Hang mở cửa rồi"
+        val who = if (m.insideNames.isEmpty()) {
+            "Lửa vừa nhóm, chưa ai vào. Bạn vào trước nhé?"
+        } else {
+            "${names(m.insideNames)} đang ngồi bên lửa. Vào Zô một cốc không?"
+        }
+        return Copy(title, "${if (deferred) "Đêm qua " else ""}${m.score}. $who")
     }
 
     fun exit(m: PushMessage.Exit, deferred: Boolean): Copy =
-        Copy("RA KHỎI HANG!", "${if (deferred) "Đêm qua " else ""}${m.score}. MU thắng rồi, cả hội ra hang cùng lúc.")
+        if (deferred) Copy("RA KHỎI HANG! 🎉", "Đêm qua ${m.score}. MU thắng, hang đóng, anh em ra ánh sáng rồi.")
+        else Copy("RA KHỎI HANG! 🎉", "${m.score}. MU thắng rồi! Cả hội lên đường ra ánh sáng.")
 
     fun invite(m: PushMessage.Invite): Copy =
-        Copy("${m.fromName} rủ bạn vào hang", "Anh em đang ngồi trong hang. Vào cùng không?")
+        Copy("${m.fromName} gọi: vào hang Zô cái!", "Lửa đang cháy, cả hội đang chờ bạn.")
 
-    fun pat(m: PushMessage.PatReceived): Copy = Copy("${m.fromName} nâng cốc 🍺 Zô!", m.text)
+    fun pat(m: PushMessage.PatReceived): Copy = Copy("${m.fromName} nâng cốc với bạn 🍺", m.text)
 
     fun reminder(m: PushMessage.MatchReminder, zone: ZoneId): Copy {
         val t = m.kickoff.atZone(zone).toLocalTime()
         val hhmm = "%02d:%02d".format(t.hour, t.minute)
-        return Copy("Đêm nay MU gặp ${m.opponent}", "Bóng lăn lúc $hhmm. Đêm nay bạn xem không?")
+        return Copy("Đêm nay MU đá với ${m.opponent} 🌙", "Bóng lăn lúc $hhmm. Thức xem cùng anh em, hay ngủ trước để hang báo sau?")
     }
 }

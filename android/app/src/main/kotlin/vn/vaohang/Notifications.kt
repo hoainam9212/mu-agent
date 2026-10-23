@@ -56,7 +56,9 @@ object Notifications {
             PackageManager.PERMISSION_GRANTED
         ) return
         val builder = NotificationCompat.Builder(context, channel)
-            .setSmallIcon(R.drawable.ic_cave)
+            .setSmallIcon(R.drawable.ic_stat_vaohang)
+            .setColor(BRAND_COLOR)
+            .setLargeIcon(largeIcon(context))
             .setContentTitle(copy.title)
             .setContentText(copy.body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(copy.body))
@@ -66,6 +68,13 @@ object Notifications {
         actions.forEach { builder.addAction(0, it.title, it.intent) }
         NotificationManagerCompat.from(context).notify(id, builder.build())
     }
+
+    /** Màu lửa cho icon nhỏ và nút trên thông báo. */
+    const val BRAND_COLOR = 0xFFFF9F43.toInt()
+
+    /** Logo tròn (người tối cổ nâng cốc trước cửa hang) hiện cạnh nội dung thông báo. */
+    fun largeIcon(context: Context): android.graphics.Bitmap? =
+        android.graphics.BitmapFactory.decodeResource(context.resources, R.drawable.ic_notification_large)
 
     /** Báo nhẹ vào giờ khác (sáng mai / hết giờ làm) qua WorkManager. */
     fun showLater(context: Context, at: Instant, id: Int, copy: Copy, caveId: Long, screen: String) {

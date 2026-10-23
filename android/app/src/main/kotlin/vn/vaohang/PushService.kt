@@ -40,7 +40,7 @@ class PushService : FirebaseMessagingService() {
                     this, notificationId(message.caveId, 2), VaoHangApp.CHANNEL_CAVE,
                     NotificationCopy.invite(message),
                     Notifications.openCave(this, message.caveId, "invite"),
-                    listOf(NotificationAction("Vào hang", Notifications.openCave(this, message.caveId, "invite", "enter"))),
+                    listOf(NotificationAction("🍺 Vào Zô", Notifications.openCave(this, message.caveId, "invite", "enter"))),
                 )
             }
             is PushMessage.PatReceived -> if (DeliveryRules.decide(message, presence) == Delivery.NOW) {
@@ -60,8 +60,8 @@ class PushService : FirebaseMessagingService() {
         when (DeliveryRules.decide(m, presence)) {
             Delivery.NOW -> {
                 val actions = if (m.youInside) emptyList() else listOf(
-                    NotificationAction("Vào hang", Notifications.openCave(this, m.caveId, "notification", "enter")),
-                    NotificationAction("Thôi, ngủ luôn", ActionReceiver.tonight(this, m.fixtureId, false, id)),
+                    NotificationAction("🔥 Vào hang", Notifications.openCave(this, m.caveId, "notification", "enter")),
+                    NotificationAction("😴 Ngủ luôn", ActionReceiver.tonight(this, m.fixtureId, false, id)),
                 )
                 Notifications.show(
                     this, id, VaoHangApp.CHANNEL_CAVE, NotificationCopy.lightsOn(m, deferred = false),
@@ -98,8 +98,8 @@ class PushService : FirebaseMessagingService() {
         Notifications.show(
             this, id, VaoHangApp.CHANNEL_REMINDER, NotificationCopy.reminder(m, zone), null,
             listOf(
-                NotificationAction("Đêm nay xem", ActionReceiver.tonight(this, m.fixtureId, true, id)),
-                NotificationAction("Tối nay không xem", ActionReceiver.tonight(this, m.fixtureId, false, id)),
+                NotificationAction("🌙 Thức xem", ActionReceiver.tonight(this, m.fixtureId, true, id)),
+                NotificationAction("😴 Ngủ trước", ActionReceiver.tonight(this, m.fixtureId, false, id)),
             ),
         )
         app.scope.launch { app.api.telemetry("reminder_shown") }

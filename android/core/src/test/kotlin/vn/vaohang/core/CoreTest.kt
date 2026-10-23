@@ -147,20 +147,20 @@ class NotificationCopyTest {
     )
 
     @Test fun outsiderSeesOnlyWhoIsInside() = assertEquals(
-        Copy("Hang đang mở", "Atlético Madrid 2-0 MU. Tuấn, Hùng và Long đang trong hang."),
+        Copy("Hang mở cửa rồi", "Atlético Madrid 2-0 MU. Tuấn, Hùng và Long đang ngồi bên lửa. Vào Zô một cốc không?"),
         NotificationCopy.lightsOn(lights(false, listOf("Tuấn", "Hùng", "Long")), deferred = false),
     )
 
     @Test fun morningVersion() = assertEquals(
-        "Đêm qua Atlético Madrid 2-0 MU. Chưa ai vào hang.",
+        "Đêm qua Atlético Madrid 2-0 MU. Lửa vừa nhóm, chưa ai vào. Bạn vào trước nhé?",
         NotificationCopy.lightsOn(lights(false, emptyList()), deferred = true).body,
     )
 
     @Test fun drawTitle() =
-        assertEquals("Hang nhóm lửa lại", NotificationCopy.lightsOn(lights(true, emptyList(), "D"), false).title)
+        assertEquals("🔥 Hoà rồi, nhóm lửa lại thôi", NotificationCopy.lightsOn(lights(true, emptyList(), "D"), false).title)
 
     @Test fun reminderUsesLocalTime() = assertEquals(
-        "Bóng lăn lúc 03:00. Đêm nay bạn xem không?",
+        "Bóng lăn lúc 03:00. Thức xem cùng anh em, hay ngủ trước để hang báo sau?",
         NotificationCopy.reminder(PushMessage.MatchReminder(1, Instant.parse("2026-11-03T20:00:00Z"), "Roma"), VN).body,
     )
 }
