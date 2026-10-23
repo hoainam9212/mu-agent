@@ -30,7 +30,7 @@ class VaoHangApp : Application() {
         nm.createNotificationChannels(
             listOf(
                 NotificationChannel(CHANNEL_CAVE, "Hang", NotificationManager.IMPORTANCE_HIGH).apply {
-                    description = "Hang mở, sáng đèn, ra khỏi hang"
+                    description = "Hang mở, nhóm lửa, ra khỏi hang"
                 },
                 NotificationChannel(CHANNEL_PATS, "Vỗ vai", NotificationManager.IMPORTANCE_DEFAULT),
                 NotificationChannel(CHANNEL_QUIET, "Tin buổi sáng", NotificationManager.IMPORTANCE_LOW).apply {

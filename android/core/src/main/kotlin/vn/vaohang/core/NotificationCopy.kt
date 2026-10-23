@@ -19,8 +19,8 @@ object NotificationCopy {
                 Copy("Bạn vẫn đang trong hang", "$when_${m.score}. Hang còn mở cho tới khi MU thắng.")
             } else {
                 Copy(
-                    if (m.result == "D") "Hang sáng đèn lại" else "Hang sáng đèn",
-                    "${m.score}. Anh em vỗ vai nhau trong 30 phút.",
+                    if (m.result == "D") "Hang nhóm lửa lại" else "Hang đã nhóm lửa",
+                    "${m.score}. Anh em ngồi quanh lửa vỗ vai nhau 30 phút.",
                 )
             }
         }

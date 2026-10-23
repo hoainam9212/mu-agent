@@ -157,7 +157,7 @@ class NotificationCopyTest {
     )
 
     @Test fun drawTitle() =
-        assertEquals("Hang sáng đèn lại", NotificationCopy.lightsOn(lights(true, emptyList(), "D"), false).title)
+        assertEquals("Hang nhóm lửa lại", NotificationCopy.lightsOn(lights(true, emptyList(), "D"), false).title)
 
     @Test fun reminderUsesLocalTime() = assertEquals(
         "Bóng lăn lúc 03:00. Đêm nay bạn xem không?",

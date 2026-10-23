@@ -33,7 +33,7 @@
             </intent-filter>
         </service>
 
-        <!-- Đo "tắt máy trong 30 phút sau còi" trong lúc hang sáng đèn, chỉ khi người dùng đã đồng ý. -->
+        <!-- Đo "tắt máy trong 30 phút sau còi" trong lúc lửa trong hang còn cháy, chỉ khi người dùng đã đồng ý. -->
         <service
             android:name=".ScreenWatchService"
             android:exported="false"

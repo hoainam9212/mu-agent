@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
@@ -54,11 +55,21 @@ data class CaveView(
     val score: String? = null,
 )
 
+@Serializable
+data class MatchDto(
+    val id: Long,
+    val kickoff: String,
+    val opponent: String,
+    val competition: String,
+    val home: Boolean,
+    val status: String,
+)
+
 class ApiException(val code: Int, val detail: String) : Exception(detail) {
     /** Lời giải thích cho người dùng. */
     val friendly: String
         get() = when (detail) {
-            "lights_off" -> "Hang đã tắt đèn. Trận sau anh em vỗ vai tiếp."
+            "lights_off" -> "Lửa tắt rồi. Trận sau anh em nhóm lửa tiếp."
             "cave_closed" -> "Hang đã đóng – MU thắng rồi!"
             "already_invited" -> "Trận này bạn rủ anh em rồi."
             "too_many_pats" -> "Vỗ vai đủ rồi, đi ngủ thôi!"
@@ -120,6 +131,9 @@ class Api(private val baseUrl: String, private val prefs: Prefs) {
     suspend fun approve(groupId: Long, userId: Long) {
         call("POST", "/v1/groups/$groupId/members/$userId/approve")
     }
+
+    suspend fun nextMatch(): MatchDto? =
+        json.decodeFromString(MatchDto.serializer().nullable, call("GET", "/v1/matches/next"))
 
     suspend fun cave(id: Long): CaveView = json.decodeFromString(call("GET", "/v1/caves/$id"))
 

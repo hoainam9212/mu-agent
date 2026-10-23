@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import vn.vaohang.ApiException
 import vn.vaohang.CaveView
 import vn.vaohang.GroupDto
+import vn.vaohang.MatchDto
 import vn.vaohang.VaoHangApp
 import vn.vaohang.core.WorkHours
 import java.time.LocalTime
@@ -27,6 +28,9 @@ data class UiState(
     val cave: CaveView? = null,
     val message: String? = null,
     val busy: Boolean = false,
+    val nickname: String? = null,
+    val meId: Long = 0,
+    val nextMatch: MatchDto? = null,
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -34,7 +38,13 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     private val api = app.api
     private val prefs = app.prefs
 
-    private val _state = MutableStateFlow(UiState(if (prefs.token == null) Screen.Onboarding else Screen.Home))
+    private val _state = MutableStateFlow(
+        UiState(
+            screen = if (prefs.token == null) Screen.Onboarding else Screen.Home,
+            nickname = prefs.nickname,
+            meId = prefs.userId,
+        ),
+    )
     val state: StateFlow<UiState> = _state
 
     init {
@@ -66,13 +76,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         prefs.measureConsent = measureConsent
         prefs.workHours = if (worksDaytime) WorkHours(LocalTime.of(8, 0), LocalTime.of(18, 0)) else null
         app.refreshFcmToken()
-        _state.update { it.copy(screen = Screen.Home) }
+        _state.update { it.copy(screen = Screen.Home, nickname = prefs.nickname, meId = prefs.userId) }
         loadGroups()
     }
 
     private suspend fun loadGroups() {
         val groups = api.groups()
-        _state.update { it.copy(groups = groups) }
+        // Trận tới chỉ để hiển thị: lỗi thì bỏ qua, không chặn danh sách hội.
+        val next = runCatching { api.nextMatch() }.getOrNull()
+        _state.update { it.copy(groups = groups, nextMatch = next) }
     }
 
     fun refreshGroups() = launchTask { loadGroups() }
@@ -109,6 +121,14 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     fun openCave(caveId: Long) = launchTask {
         val cave = api.cave(caveId)
         _state.update { it.copy(screen = Screen.Cave(caveId), cave = cave) }
+    }
+
+    /** Tải lại màn hang định kỳ để thấy anh em mới vào và câu vỗ vai mới; lỗi mạng thì im lặng. */
+    fun refreshCaveQuietly(caveId: Long) {
+        viewModelScope.launch {
+            val cave = runCatching { api.cave(caveId) }.getOrNull() ?: return@launch
+            _state.update { if (it.screen == Screen.Cave(caveId)) it.copy(cave = cave) else it }
+        }
     }
 
     fun enterCave(caveId: Long, source: String = "app") = launchTask {
