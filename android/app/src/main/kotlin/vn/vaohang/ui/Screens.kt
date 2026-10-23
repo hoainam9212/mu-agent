@@ -7,6 +7,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -18,6 +19,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -45,10 +47,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
@@ -67,11 +66,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -144,35 +147,68 @@ private fun Body(text: String, color: Color = Mute, modifier: Modifier = Modifie
 private fun SectionTitle(text: String) =
     Text(text, color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
 
-/** Nút chính màu đỏ MU, có thể "thở" (phóng to nhẹ) để gọi bấm. */
+/**
+ * Nút "đất nặn": có độ dày (lớp đáy sẫm), mặt trên bóng nhẹ; bấm vào thì lún xuống.
+ */
 @Composable
-private fun FireButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, pulse: Boolean = false) {
+private fun ClayButton(
+    text: String,
+    onClick: () -> Unit,
+    base: Color,
+    textColor: Color,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    pulse: Boolean = false,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val depth = 5.dp
+    val sink by animateDpAsState(if (pressed && enabled) depth else 0.dp, tween(90), label = "sink")
     val breathe by rememberInfiniteTransition(label = "breathe").animateFloat(
         1f, 1.04f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "s",
     )
-    Button(
-        onClick = onClick, enabled = enabled,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MuRed, contentColor = Color.White,
-            disabledContainerColor = RockLight, disabledContentColor = Mute,
-        ),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
-        modifier = modifier
+    val face = if (enabled) base else RockLight
+    Box(
+        modifier
             .scale(if (pulse && enabled) breathe else 1f)
-            .shadow(if (enabled) 14.dp else 0.dp, RoundedCornerShape(50), spotColor = MuRed, ambientColor = MuRed),
-    ) { Text(text, fontSize = 16.sp, fontWeight = FontWeight.Bold) }
+            .padding(bottom = depth)
+            .drawBehind {
+                val r = CornerRadius(size.height / 2)
+                val d = depth.toPx()
+                val s = sink.toPx()
+                drawRoundRect(Color.Black.copy(alpha = 0.35f), topLeft = Offset(0f, d + 3f), size = size, cornerRadius = r)
+                drawRoundRect(lerp(face, Color.Black, 0.4f), topLeft = Offset(0f, d), size = size, cornerRadius = r)
+                drawRoundRect(
+                    Brush.verticalGradient(listOf(lerp(face, Color.White, 0.22f), face, lerp(face, Color.Black, 0.12f)), startY = s, endY = s + size.height),
+                    topLeft = Offset(0f, s), size = size, cornerRadius = r,
+                )
+                drawRoundRect(
+                    Color.White.copy(alpha = 0.16f), topLeft = Offset(size.width * 0.1f, s + size.height * 0.1f),
+                    size = Size(size.width * 0.8f, size.height * 0.26f), cornerRadius = CornerRadius(size.height * 0.13f),
+                )
+            }
+            .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
+            .padding(horizontal = 22.dp, vertical = 13.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text, color = if (enabled) textColor else Mute, fontFamily = DisplayFont, fontWeight = FontWeight.ExtraBold,
+            fontSize = 18.sp, maxLines = 1, modifier = Modifier.offset(y = sink),
+        )
+    }
 }
 
+/** Nút chính: đất nặn đỏ MU. */
 @Composable
-private fun GhostButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, color: Color = Gold) {
-    OutlinedButton(
-        onClick = onClick,
-        border = androidx.compose.foundation.BorderStroke(1.5.dp, color.copy(alpha = 0.7f)),
-        colors = ButtonDefaults.outlinedButtonColors(contentColor = color),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
-        modifier = modifier,
-    ) { Text(text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold) }
-}
+private fun FireButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, pulse: Boolean = false) =
+    ClayButton(text, onClick, MuRed, Color.White, modifier, enabled, pulse)
+
+/** Nút phụ: đất nặn nâu đá. */
+@Composable
+private fun GhostButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, color: Color = Gold) =
+    ClayButton(text, onClick, ClayStone, color, modifier)
+
+private val ClayStone = Color(0xFF5B4535)
 
 @Composable
 private fun caveFieldColors() = OutlinedTextFieldDefaults.colors(
@@ -261,7 +297,7 @@ fun OnboardingScreen(busy: Boolean, onDone: (String, Boolean, Boolean) -> Unit) 
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                "VÀO HANG", color = Ink, fontSize = 48.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp,
+                "VÀO HANG", color = Ink, fontSize = 52.sp, fontFamily = DisplayFont, fontWeight = FontWeight.ExtraBold, letterSpacing = 2.sp,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
@@ -320,7 +356,7 @@ private fun NextMatchCard(m: MatchDto) {
             }
             Text(
                 if (m.home) "MU  –  ${m.opponent}" else "${m.opponent}  –  MU",
-                color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black,
+                color = Color.White, fontSize = 28.sp, fontFamily = DisplayFont, fontWeight = FontWeight.ExtraBold,
             )
             Text(
                 "${m.competition} · ${Weekdays[local.dayOfWeek.value - 1]} ${local.dayOfMonth}/${local.monthValue} · " +
@@ -348,7 +384,7 @@ private fun GroupCard(group: GroupDto, meId: Long, actions: UiActions) {
             CaveMouth(open, Modifier.size(84.dp, 70.dp))
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(group.name, color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(group.name, color = Ink, fontSize = 22.sp, fontFamily = DisplayFont, fontWeight = FontWeight.ExtraBold)
                 if (group.status == "pending") Text("⏳ Chờ duyệt", color = Mute, fontSize = 14.sp)
                 else Text("👥 ${group.members.size}", color = Mute, fontSize = 14.sp)
             }
@@ -367,7 +403,7 @@ private fun GroupCard(group: GroupDto, meId: Long, actions: UiActions) {
             ) {
                 Column(Modifier.weight(1f)) {
                     Kicker("🔑 MÃ MỜI", Mute)
-                    Text(code, color = Gold, fontSize = 24.sp, fontWeight = FontWeight.Black, letterSpacing = 4.sp)
+                    Text(code, color = Gold, fontSize = 28.sp, fontFamily = DisplayFont, fontWeight = FontWeight.ExtraBold, letterSpacing = 4.sp)
                 }
                 GhostButton("📤 Gửi", onClick = {
                     val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(
@@ -402,7 +438,7 @@ fun HomeScreen(state: UiState, actions: UiActions) {
                 Column(Modifier.weight(1f)) {
                     Kicker("VÀO HANG")
                     Text(
-                        "Chào ${state.nickname ?: "anh em"} 👋", color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Black,
+                        "Chào ${state.nickname ?: "anh em"} 👋", color = Ink, fontSize = 30.sp, fontFamily = DisplayFont, fontWeight = FontWeight.ExtraBold,
                     )
                 }
                 TextButton(onClick = actions::refreshGroups) { Text("↻", color = Mute, fontSize = 24.sp) }
@@ -438,7 +474,7 @@ fun HomeScreen(state: UiState, actions: UiActions) {
 @Composable
 private fun ScoreBoard(score: String) {
     Text(
-        score, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp,
+        score, color = Color.White, fontSize = 20.sp, fontFamily = DisplayFont, fontWeight = FontWeight.ExtraBold,
         modifier = Modifier.clip(RoundedCornerShape(50))
             .background(Brush.horizontalGradient(listOf(RedDeep, MuRed)))
             .padding(horizontal = 20.dp, vertical = 8.dp),
@@ -462,7 +498,7 @@ private fun FireTimer(until: String?, onExpired: () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("🔥", fontSize = 20.sp, modifier = Modifier.weight(1f))
-            Text("%d:%02d".format(left.toMinutes(), left.seconds % 60), color = Ember, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Text("%d:%02d".format(left.toMinutes(), left.seconds % 60), color = Ember, fontSize = 22.sp, fontFamily = DisplayFont, fontWeight = FontWeight.ExtraBold)
         }
         LinearProgressIndicator(
             progress = { fraction }, color = Ember, trackColor = RockLight,
@@ -648,15 +684,11 @@ fun CelebrateScreen(onDone: () -> Unit) {
             }
             Spacer(Modifier.height(24.dp))
             Text(
-                "RA KHỎI HANG!", color = Color.White, fontSize = 44.sp, fontWeight = FontWeight.Black,
+                "RA KHỎI HANG!", color = Color.White, fontSize = 48.sp, fontFamily = DisplayFont, fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center, modifier = Modifier.scale(pop),
             )
             Spacer(Modifier.height(28.dp))
-            Button(
-                onClick = onDone,
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = MuRed),
-                contentPadding = PaddingValues(horizontal = 28.dp, vertical = 16.dp),
-            ) { Text("🎉  Ăn mừng", fontSize = 17.sp, fontWeight = FontWeight.Black) }
+            ClayButton("🎉  Ăn mừng", onDone, Color.White, MuRed)
         }
     }
 }

@@ -300,11 +300,11 @@ fun CampScene(
     val start = -PI / 2 + if (n % 2 == 0 && n > 0) PI / n else 0.0
     // Đông người thì nhân vật nhỏ lại và vòng ngồi rộng ra (tối đa 10 người một hội).
     val avatar = when {
-        n <= 5 -> 70.dp
-        n <= 7 -> 60.dp
-        else -> 50.dp
+        n <= 5 -> 84.dp
+        n <= 7 -> 70.dp
+        else -> 58.dp
     }
-    val rx = if (n <= 6) 118.0 else 132.0
+    val rx = if (n <= 6) 124.0 else 134.0
     val ry = height.value * (if (n <= 6) 0.27 else 0.31)
     val seats = people.mapIndexed { i, m ->
         val angle = start + 2 * PI * i / n

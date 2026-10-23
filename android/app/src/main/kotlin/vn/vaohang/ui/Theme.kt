@@ -1,10 +1,16 @@
 package vn.vaohang.ui
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import vn.vaohang.R
 
 // Bảng màu "trong hang": đá tối, ánh lửa, đỏ – vàng MU.
 val CaveBlack = Color(0xFF0B0908)
@@ -30,6 +36,29 @@ fun avatarColor(seed: Long): Color = AvatarColors[Math.floorMod(seed, AvatarColo
 /** Chữ trắng trên nền tối, chữ đen trên nền sáng (vàng). */
 fun onColor(background: Color): Color = if (background.luminance() > 0.45f) CaveBlack else Color.White
 
+/** Chữ thường: Be Vietnam Pro. Tiêu đề, nút: Baloo 2 (mập, tròn như đất nặn). Cả hai hỗ trợ đủ dấu tiếng Việt. */
+val BodyFont = FontFamily(
+    Font(R.font.be_vietnam_pro_regular, FontWeight.Normal),
+    Font(R.font.be_vietnam_pro_medium, FontWeight.Medium),
+    Font(R.font.be_vietnam_pro_semibold, FontWeight.SemiBold),
+    Font(R.font.be_vietnam_pro_bold, FontWeight.Bold),
+)
+val DisplayFont = FontFamily(
+    Font(R.font.baloo2_bold, FontWeight.Bold),
+    Font(R.font.baloo2_extrabold, FontWeight.ExtraBold),
+)
+
+private fun Typography.withBodyFont(): Typography {
+    fun TextStyle.f() = copy(fontFamily = BodyFont)
+    return copy(
+        displayLarge = displayLarge.f(), displayMedium = displayMedium.f(), displaySmall = displaySmall.f(),
+        headlineLarge = headlineLarge.f(), headlineMedium = headlineMedium.f(), headlineSmall = headlineSmall.f(),
+        titleLarge = titleLarge.f(), titleMedium = titleMedium.f(), titleSmall = titleSmall.f(),
+        bodyLarge = bodyLarge.f(), bodyMedium = bodyMedium.f(), bodySmall = bodySmall.f(),
+        labelLarge = labelLarge.f(), labelMedium = labelMedium.f(), labelSmall = labelSmall.f(),
+    )
+}
+
 @Composable
 fun VaoHangTheme(content: @Composable () -> Unit) {
     MaterialTheme(
@@ -40,6 +69,7 @@ fun VaoHangTheme(content: @Composable () -> Unit) {
             surface = Rock, onSurface = Ink, surfaceVariant = RockLight, onSurfaceVariant = Mute,
             outline = RockEdge,
         ),
+        typography = Typography().withBodyFont(),
         content = content,
     )
 }
