@@ -467,20 +467,20 @@ fun CampScene(
                         radius = w * 0.55f, center = feet,
                     )
                 }
-                // Bóng đổ ra xa đống lửa (chỉ khi lửa cháy): bắt đầu đậm ngay dưới chân, nhạt dần ra xa.
+                // Bóng đổ ra xa đống lửa (chỉ khi lửa cháy): bầu dục mềm nối liền bóng dưới chân, mờ dần ra mép, không viền sắc.
                 if (lit > 0.01f) {
                     val dir = feet - fire
                     val u = dir / dir.getDistance().coerceAtLeast(1f)
                     val len = seat.width.dp.toPx() * 1.1f
-                    val wid = seat.width.dp.toPx() * 0.55f
-                    val c = feet + u * (len * 0.5f)
+                    val wid = seat.width.dp.toPx() * 0.5f
+                    val c = feet + u * (len * 0.3f)
                     val angle = Math.toDegrees(kotlin.math.atan2(u.y, u.x).toDouble()).toFloat()
                     rotate(angle, pivot = c) {
                         scale(1f, wid / len, pivot = c) {
                             drawCircle(
                                 Brush.radialGradient(
-                                    listOf(Color.Black.copy(alpha = 0.34f * lit), Color.Black.copy(alpha = 0.16f * lit), Color.Transparent),
-                                    center = c - Offset(len * 0.5f, 0f), radius = len,
+                                    listOf(Color.Black.copy(alpha = 0.3f * lit), Color.Black.copy(alpha = 0.12f * lit), Color.Transparent),
+                                    center = c, radius = len / 2,
                                 ),
                                 radius = len / 2, center = c,
                             )
