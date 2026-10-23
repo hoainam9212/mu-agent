@@ -16,6 +16,17 @@ android {
     namespace = "vn.vaohang"
     compileSdk = 35
 
+    // Khoá ký cố định cho bản debug (không phải bí mật): APK build trên GitHub lần nào cũng cùng chữ ký,
+    // nên cài đè lên bản cũ được mà không phải gỡ app (mất tài khoản, hội).
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.vnext.muagent" // trùng app đã đăng ký trong Firebase
         minSdk = 26
