@@ -348,12 +348,13 @@ private data class Seat(
  * Không đi quá 1,5 lần bề ngang người, không ngồi lên đống lửa, không ra ngoài màn hình; không được thì ngồi yên, vẫn với tay.
  */
 private fun sitBesideToPat(seats: List<Seat>, patters: Set<Long>, fireBase: Float, fireHalf: Float): List<Seat> {
-    val taken = mutableSetOf<Long>()
-    return seats.map { p ->
-        if (p.member.id !in patters) return@map p
-        val friends = seats
-            .filter { it.member.id != p.member.id && it.member.id !in patters && it.member.id !in taken }
-            .sortedBy { (it.x - p.x) * (it.x - p.x) + (it.feetY - p.feetY) * (it.feetY - p.feetY) }
+    val result = seats.toMutableList()
+    val taken = mutableSetOf<Long>() // đã có người ngồi sát vỗ vai
+    val anchored = mutableMapOf<Long, Float>() // người vỗ vai được người khác nhích tới: ngồi yên, quay về phía người đó
+    fun dist(a: Seat, b: Seat) = (a.x - b.x) * (a.x - b.x) + (a.feetY - b.feetY) * (a.feetY - b.feetY)
+    seats.forEachIndexed { i, p ->
+        if (p.member.id !in patters || p.member.id in anchored) return@forEachIndexed
+        val friends = result.filterIndexed { j, f -> j != i && f.member.id !in taken }.sortedBy { dist(it, p) }
         for (f in friends.take(2)) {
             val reach = f.width * 0.3f + p.width * 0.55f
             val onRight = p.x >= f.x
@@ -363,15 +364,22 @@ private fun sitBesideToPat(seats: List<Seat>, patters: Set<Long>, fireBase: Floa
             val onFire = kotlin.math.abs(x) < fireHalf + p.width * 0.35f && feetY in (fireBase - 70f)..(fireBase + 50f)
             if (travel <= p.width * 1.5f && !onFire && kotlin.math.abs(x) <= 150f) {
                 taken += f.member.id
-                return@map p.copy(
+                // Hai người cùng vỗ vai: người kia ngồi yên, quay sang vỗ lại.
+                if (f.member.id in patters) anchored[f.member.id] = x
+                result[i] = p.copy(
                     x = x, feetY = feetY, centerY = feetY - (p.feetY - p.centerY),
                     flip = !onRight, patting = true, depth = f.depth + 0.01f,
                 )
+                return@forEachIndexed
             }
         }
         // Không nhích được: ngồi yên, với tay về phía người gần nhất.
         val near = friends.firstOrNull()
-        p.copy(patting = true, flip = near != null && near.x > p.x)
+        result[i] = p.copy(patting = true, flip = near != null && near.x > p.x)
+    }
+    return result.map { s ->
+        val partnerX = anchored[s.member.id] ?: return@map s
+        s.copy(patting = true, flip = partnerX > s.x)
     }
 }
 
