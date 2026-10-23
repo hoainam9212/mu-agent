@@ -116,7 +116,10 @@ fun caveFloorTest(screenW: Float, screenH: Float, fireY: Float): (Float, Float) 
  * phần dưới còn trống tô màu nền đất cho liền.
  */
 @Composable
-fun CaveBackdrop(fireOn: Boolean, modifier: Modifier = Modifier, fireY: Float = 0.62f, content: @Composable BoxScope.() -> Unit) {
+fun CaveBackdrop(
+    fireOn: Boolean, modifier: Modifier = Modifier, fireY: Float = 0.62f, shadeEdges: Boolean = true,
+    content: @Composable BoxScope.() -> Unit,
+) {
     val litImage = ImageBitmap.imageResource(R.drawable.cave_lit)
     val darkImage = ImageBitmap.imageResource(R.drawable.cave_dark)
     val flicker by rememberInfiniteTransition(label = "torch").animateFloat(
@@ -154,8 +157,8 @@ fun CaveBackdrop(fireOn: Boolean, modifier: Modifier = Modifier, fireY: Float = 
                 radius = size.width * 0.9f, center = fire,
             )
             // Tối hai mép trên/dưới cho chữ và nút dễ đọc.
-            drawRect(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent), endY = size.height * 0.2f))
-            drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f)), startY = size.height * 0.78f))
+            if (shadeEdges) drawRect(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent), endY = size.height * 0.2f))
+            if (shadeEdges) drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f)), startY = size.height * 0.78f))
         },
         content = content,
     )

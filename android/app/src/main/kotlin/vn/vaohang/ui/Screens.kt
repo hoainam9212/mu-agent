@@ -61,6 +61,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -77,12 +78,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -101,6 +104,7 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.sin
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** Thời gian lửa cháy sau mỗi trận không thắng (LIGHT_MINUTES trên máy chủ). */
 private const val FIRE_MINUTES = 30
@@ -598,8 +602,44 @@ private fun ChoiceSheet(cave: CaveView, onPick: (Long) -> Unit, onClose: () -> U
     }
 }
 
+/** Xem trước ảnh hang vuông (không tên, không chữ) rồi lưu hoặc gửi sang app khác. */
 @Composable
-fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, actions: UiActions) {
+private fun SquareSheet(people: List<Member>, burning: Boolean, onClose: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val layer = rememberGraphicsLayer()
+    var saved by remember { mutableStateOf(false) }
+    Box(
+        Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.75f)).clickable(onClick = onClose),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(20.dp)
+                // Chặn chạm xuyên xuống lớp nền (chạm nền là đóng).
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            FittedCaveSquare(people, burning, Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)), layer)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (canSaveSquare) {
+                    GhostButton(
+                        if (saved) "✓  Đã lưu" else "⬇  Lưu vào máy",
+                        onClick = { scope.launch { saved = runCatching { saveSquare(context, squareBitmap(layer)) }.getOrDefault(false) } },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                FireButton(
+                    "📤  Chia sẻ",
+                    onClick = { scope.launch { runCatching { shareSquare(context, squareBitmap(layer)) } } },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, actions: UiActions, showSquare: Boolean = false) {
     val context = LocalContext.current
     // Không chụp màn hình, không chuyển tiếp ra ngoài.
     DisposableEffect(Unit) {
@@ -608,7 +648,14 @@ fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, actions: UiAction
         onDispose { window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE) }
     }
     var choosing by remember { mutableStateOf(false) }
-    BackHandler { if (choosing) choosing = false else actions.home() }
+    var squaring by remember { mutableStateOf(showSquare) }
+    BackHandler {
+        when {
+            squaring -> squaring = false
+            choosing -> choosing = false
+            else -> actions.home()
+        }
+    }
     // Tải lại đều đặn để thấy anh em mới vào và câu vỗ vai mới.
     LaunchedEffect(cave.id) {
         while (true) {
@@ -633,7 +680,14 @@ fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, actions: UiAction
                 Modifier.align(Alignment.TopCenter).fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                TextButton(onClick = actions::home) { Text("‹  ${groupName ?: "Hội anh em"}", color = Ink.copy(alpha = 0.8f), fontSize = 15.sp) }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = actions::home, modifier = Modifier.weight(1f)) {
+                        Text("‹  ${groupName ?: "Hội anh em"}", color = Ink.copy(alpha = 0.8f), fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth())
+                    }
+                    if (open && cave.meInside) {
+                        TextButton(onClick = { squaring = true }) { Text("📸  Ảnh hang", color = Gold, fontSize = 15.sp) }
+                    }
+                }
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                     cave.score?.let { ScoreBoard(it) }
                 }
@@ -663,6 +717,7 @@ fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, actions: UiAction
             if (choosing && burning) {
                 ChoiceSheet(cave, onPick = { id -> actions.pat(cave.id, id); choosing = false }, onClose = { choosing = false })
             }
+            if (squaring) SquareSheet(cave.inside, burning, onClose = { squaring = false })
         }
     }
 }

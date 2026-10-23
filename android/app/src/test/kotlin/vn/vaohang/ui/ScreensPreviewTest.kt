@@ -2,7 +2,9 @@ package vn.vaohang.ui
 
 import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import org.junit.Rule
 import org.junit.Test
 import vn.vaohang.CaveRef
@@ -84,4 +86,24 @@ class ScreensPreviewTest {
     }
 
     @Test fun celebrate() = shot { CelebrateScreen {} }
+
+    // Ảnh hang vuông: khung chụp đúng 1080x1080 như ảnh xuất ra.
+    private val ten = crew + listOf(Member(6, "Phong"), Member(7, "Quân"), Member(8, "Khoa"), Member(9, "Bình"), Member(10, "Trung"))
+
+    private fun square(people: List<Member>, burning: Boolean) {
+        paparazzi.unsafeUpdateConfig(deviceConfig = DeviceConfig.PIXEL_5.copy(screenHeight = 1080))
+        shot { FittedCaveSquare(people, burning, Modifier.fillMaxWidth()) }
+    }
+
+    @Test fun squareFireBurning() = square(crew, burning = true)
+
+    @Test fun squareFireOut() = square(crew, burning = false)
+
+    @Test fun squareFullCrew() = square(ten, burning = true)
+
+    @Test fun squareFullCrewAsleep() = square(ten, burning = false)
+
+    @Test fun squareSmall() = square(crew.take(2), burning = true)
+
+    @Test fun caveSquareSheet() = shot { CaveScreen(cave(fireOn = true), "Hội Tối Cổ Tokyo", 1, NoActions, showSquare = true) }
 }
