@@ -537,7 +537,7 @@ private fun PatChoice(text: String, onClick: () -> Unit) {
             .clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("👋", fontSize = 20.sp)
+        Text("🍺", fontSize = 20.sp)
         Spacer(Modifier.width(12.dp))
         Text(text, color = Ink, fontSize = 15.sp, lineHeight = 21.sp)
     }
@@ -566,7 +566,7 @@ private fun FireOutPanel() {
 private const val FIRE_Y = 0.6f
 private val SceneHeight = 330.dp
 
-/** Câu vỗ vai gần nhất của mỗi người (tối đa 3 người), để hiện thành bong bóng trên đầu họ. */
+/** Câu "Zô" gần nhất của mỗi người (tối đa 3 người), để hiện thành bong bóng trên đầu họ. */
 private fun recentSayings(cave: CaveView): Map<Long, String> {
     val idByName = cave.inside.associate { it.nickname to it.id }
     val latest = LinkedHashMap<Long, String>()
@@ -648,7 +648,7 @@ fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, actions: UiAction
                     !cave.meInside ->
                         FireButton("🔥  Vào hang", onClick = { actions.enterCave(cave.id) }, pulse = true, modifier = Modifier.fillMaxWidth())
                     burning -> {
-                        FireButton("👋  Vỗ vai", onClick = { choosing = true }, pulse = cave.pats.isEmpty(), modifier = Modifier.fillMaxWidth())
+                        FireButton("🍺  Zô!", onClick = { choosing = true }, pulse = cave.pats.isEmpty(), modifier = Modifier.fillMaxWidth())
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             GhostButton("📣  Rủ anh em", onClick = { actions.invite(cave.id) }, modifier = Modifier.weight(1f))
                             GhostButton("🚪  Ra ngoài thôi!", onClick = { actions.leaveCave(cave.id) }, color = Mute, modifier = Modifier.weight(1f))

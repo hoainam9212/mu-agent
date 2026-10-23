@@ -72,7 +72,7 @@ class ApiException(val code: Int, val detail: String) : Exception(detail) {
             "lights_off" -> "Lửa tắt rồi. Trận sau anh em nhóm lửa tiếp."
             "cave_closed" -> "Hang đã đóng – MU thắng rồi!"
             "already_invited" -> "Trận này bạn rủ anh em rồi."
-            "too_many_pats" -> "Vỗ vai đủ rồi, đi ngủ thôi!"
+            "too_many_pats" -> "Zô đủ rồi, đi ngủ thôi!"
             "not_inside" -> "Vào hang trước đã."
             "bad_code" -> "Mã mời không đúng."
             "group_full" -> "Hội đã đủ 10 người."

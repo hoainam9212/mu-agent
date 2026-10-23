@@ -20,7 +20,7 @@ object NotificationCopy {
             } else {
                 Copy(
                     if (m.result == "D") "Hang nhóm lửa lại" else "Hang đã nhóm lửa",
-                    "${m.score}. Anh em ngồi quanh lửa vỗ vai nhau 30 phút.",
+                    "${m.score}. Anh em ngồi quanh lửa, nâng cốc Zô 30 phút.",
                 )
             }
         }
@@ -35,7 +35,7 @@ object NotificationCopy {
     fun invite(m: PushMessage.Invite): Copy =
         Copy("${m.fromName} rủ bạn vào hang", "Anh em đang ngồi trong hang. Vào cùng không?")
 
-    fun pat(m: PushMessage.PatReceived): Copy = Copy("${m.fromName} vỗ vai", m.text)
+    fun pat(m: PushMessage.PatReceived): Copy = Copy("${m.fromName} nâng cốc 🍺 Zô!", m.text)
 
     fun reminder(m: PushMessage.MatchReminder, zone: ZoneId): Copy {
         val t = m.kickoff.atZone(zone).toLocalTime()

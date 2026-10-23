@@ -50,7 +50,7 @@ Dán lần lượt, đúng thứ tự (ảnh 1 định nhân vật; các ảnh s
 | # | Tên file khi lưu | Nội dung |
 |---|---|---|
 | 1 | `chars_sit.png` | 6 nhân vật ngồi xếp bằng |
-| 2 | `chars_pat.png` | 6 nhân vật ngồi, với tay vỗ vai bạn bên phải |
+| 2 | `chars_pat.png` | (không dùng nữa – thay bằng `chars_toast.png`, mục 9) |
 | 3 | `chars_sleep.png` | 6 nhân vật nằm ngang ngủ trên đất |
 | 4 | `chars_cheer.png` | 6 nhân vật nhảy mừng |
 | 5 | `fire_burning.png` | đống lửa đang cháy |
@@ -147,3 +147,22 @@ vệt sáng lửa ở (0.50, 0.685); nền đất từ y ≈ 0.54. Ảnh vỗ va
   - `LyingWhenAsleep`: kiểu nhân vật nào ngủ nằm (với bộ chibi nằm ngang hết thì là cả 6, bỏ bước xoay ảnh).
   - `SitSprites` / `SleepSprites` / `CheerSprites`: thêm `PatSprites` nếu có ảnh vỗ vai.
 - Xem trước giao diện: chạy workflow **UI preview** (Actions → UI preview → Run workflow); ảnh chụp lưu ở `docs/ui-preview/`.
+
+## 9. Bổ sung (23/10): tư thế nâng cốc "Zô!" thay cho vỗ vai
+
+Chủ dự án đổi cử chỉ an ủi từ **vỗ vai** sang **nâng cốc bia nói "Zô!"** (không cần ngồi sát nhau).
+Cần thêm một ảnh, tạo trong **cùng cuộc trò chuyện Gemini đã tạo bộ chibi** (để giữ đúng 6 người):
+
+| # | Tên file | Nội dung |
+|---|---|---|
+| 10 | `chars_toast.png` | 6 nhân vật ngồi, nâng cốc bia gỗ lên nói "Zô!" |
+
+```
+The same 6 chibi cavemen, same order, same 3x2 grid (3 columns, 2 rows), same size. Each one sits cross-legged and raises a big wooden beer mug with white foam high in his right hand toward the viewer, as if shouting "cheers!" together, with a warm brave smile (a little sad but comforting). Keep both legs crossed and the whole body inside his cell. Solid flat pure green background (#00FF00), no floor, no shadows, no text, no logos.
+```
+
+Kiểm tra như mục 5 (đúng 6 người, cùng thứ tự với `chars_sit.png`, nền xanh thuần, mỗi người tách rời; **ai cũng cầm cốc**,
+không có chữ "Zô" vẽ trong ảnh). Lưu vào `art/incoming/chibi/chars_toast.png` rồi commit và push như mục 7.
+
+Ghép: `python3 -I android/tools/art/keyout.py sheet art/incoming/chibi/chars_toast.png toast --cols 3 --rows 2 --out android/app/src/main/res/drawable-nodpi`,
+rồi trong `CaveArt.kt` thay `private val ToastSprites = SitSprites` bằng mảng `R.drawable.caveman_<i>_toast`.

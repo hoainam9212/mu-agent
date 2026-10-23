@@ -32,7 +32,7 @@ class VaoHangApp : Application() {
                 NotificationChannel(CHANNEL_CAVE, "Hang", NotificationManager.IMPORTANCE_HIGH).apply {
                     description = "Hang mở, nhóm lửa, ra khỏi hang"
                 },
-                NotificationChannel(CHANNEL_PATS, "Vỗ vai", NotificationManager.IMPORTANCE_DEFAULT),
+                NotificationChannel(CHANNEL_PATS, "Zô", NotificationManager.IMPORTANCE_DEFAULT),
                 NotificationChannel(CHANNEL_QUIET, "Tin buổi sáng", NotificationManager.IMPORTANCE_LOW).apply {
                     description = "Báo nhẹ cho người đã ngủ, không rung không kêu"
                 },

@@ -236,12 +236,7 @@ fun Campfire(burning: Boolean, modifier: Modifier = Modifier) {
 
 // ---- Người tối cổ mặc áo MU (chibi 2D) ----------------------------------------------------------
 
-// 6 kiểu nhân vật, mỗi kiểu 4 tư thế (ngồi, vỗ vai, ngủ nằm, nhảy mừng). Mỗi người luôn giữ một kiểu (theo id).
-// Ảnh vỗ vai: tay với sang trái người xem (kiểu 0 Gemini vẽ ngồi, dùng như ảnh ngồi).
-private val PatSprites = intArrayOf(
-    R.drawable.caveman_0_pat, R.drawable.caveman_1_pat, R.drawable.caveman_2_pat,
-    R.drawable.caveman_3_pat, R.drawable.caveman_4_pat, R.drawable.caveman_5_pat,
-)
+// 6 kiểu nhân vật, mỗi kiểu 4 tư thế (ngồi, nâng cốc "Zô", ngủ nằm, nhảy mừng). Mỗi người luôn giữ một kiểu (theo id).
 private val SitSprites = intArrayOf(
     R.drawable.caveman_0_sit, R.drawable.caveman_1_sit, R.drawable.caveman_2_sit,
     R.drawable.caveman_3_sit, R.drawable.caveman_4_sit, R.drawable.caveman_5_sit,
@@ -254,6 +249,9 @@ private val CheerSprites = intArrayOf(
     R.drawable.caveman_0_cheer, R.drawable.caveman_1_cheer, R.drawable.caveman_2_cheer,
     R.drawable.caveman_3_cheer, R.drawable.caveman_4_cheer, R.drawable.caveman_5_cheer,
 )
+
+// Nâng cốc "Zô": tạm dùng ảnh ngồi cho tới khi có chars_toast.png (xem docs/ART_HANDOFF.md).
+private val ToastSprites = SitSprites
 
 fun cavemanVariant(seed: Long): Int = Math.floorMod(seed, SitSprites.size.toLong()).toInt()
 
@@ -268,7 +266,7 @@ fun cavemanBox(seed: Long, width: Dp, asleep: Boolean): Pair<Dp, Dp> =
 
 /**
  * Một anh em trong hang: người tối cổ chibi mặc áo đỏ MU, thở nhẹ.
- * [asleep] khi lửa tắt (nằm ngủ); [cheer] nhảy mừng; [patting] vừa vỗ vai ai đó ([flip] lật để tay chỉ sang phải);
+ * [asleep] khi lửa tắt (nằm ngủ); [cheer] nhảy mừng; [toasting] vừa nâng cốc "Zô!" ([flip] lật quay sang phải);
  * [me] có vầng sáng vàng dưới chân.
  */
 @Composable
@@ -281,14 +279,14 @@ fun Caveman(
     asleep: Boolean = false,
     cheer: Boolean = false,
     showName: Boolean = true,
-    patting: Boolean = false,
+    toasting: Boolean = false,
     flip: Boolean = false,
 ) {
     val v = cavemanVariant(seed)
     val sprite = when {
         cheer -> CheerSprites[v]
         asleep -> SleepSprites[v]
-        patting -> PatSprites[v]
+        toasting -> ToastSprites[v]
         else -> SitSprites[v]
     }
     val (boxW, boxH) = cavemanBox(seed, width, asleep)
@@ -337,51 +335,11 @@ private val Dirt = Color(0xFF2A1C12)
 
 private data class Seat(
     val member: Member, val x: Float, val feetY: Float, val centerY: Float, val width: Float, val depth: Float, val tilt: Float = 0f,
-    // Ảnh gốc quay mặt/với tay sang trái người xem; flip = quay sang phải.
+    // Ảnh gốc hơi quay sang trái người xem; flip = quay sang phải (về phía giữa vòng).
     val flip: Boolean = x < 0f,
-    val patting: Boolean = false,
+    val toasting: Boolean = false,
 )
 
-/**
- * Người vừa vỗ vai nhích dọc vòng ngồi về phía người bạn gần nhất, tới khi bàn tay chạm vai người đó
- * (ảnh vỗ vai: tay ở mép trái khung, nên ngồi bên phải bạn thì không lật, ngồi bên trái thì lật).
- * Không đi quá 1,5 lần bề ngang người, không ngồi lên đống lửa, không ra ngoài màn hình; không được thì ngồi yên, vẫn với tay.
- */
-private fun sitBesideToPat(seats: List<Seat>, patters: Set<Long>, fireBase: Float, fireHalf: Float): List<Seat> {
-    val result = seats.toMutableList()
-    val taken = mutableSetOf<Long>() // đã có người ngồi sát vỗ vai
-    val anchored = mutableMapOf<Long, Float>() // người vỗ vai được người khác nhích tới: ngồi yên, quay về phía người đó
-    fun dist(a: Seat, b: Seat) = (a.x - b.x) * (a.x - b.x) + (a.feetY - b.feetY) * (a.feetY - b.feetY)
-    seats.forEachIndexed { i, p ->
-        if (p.member.id !in patters || p.member.id in anchored) return@forEachIndexed
-        val friends = result.filterIndexed { j, f -> j != i && f.member.id !in taken }.sortedBy { dist(it, p) }
-        for (f in friends.take(2)) {
-            val reach = f.width * 0.3f + p.width * 0.55f
-            val onRight = p.x >= f.x
-            val x = if (onRight) f.x + reach else f.x - reach
-            val feetY = f.feetY + (p.feetY - f.feetY) * 0.3f
-            val travel = kotlin.math.hypot(x - p.x, feetY - p.feetY)
-            val onFire = kotlin.math.abs(x) < fireHalf + p.width * 0.35f && feetY in (fireBase - 70f)..(fireBase + 50f)
-            if (travel <= p.width * 1.5f && !onFire && kotlin.math.abs(x) <= 150f) {
-                taken += f.member.id
-                // Hai người cùng vỗ vai: người kia ngồi yên, quay sang vỗ lại.
-                if (f.member.id in patters) anchored[f.member.id] = x
-                result[i] = p.copy(
-                    x = x, feetY = feetY, centerY = feetY - (p.feetY - p.centerY),
-                    flip = !onRight, patting = true, depth = f.depth + 0.01f,
-                )
-                return@forEachIndexed
-            }
-        }
-        // Không nhích được: ngồi yên, với tay về phía người gần nhất.
-        val near = friends.firstOrNull()
-        result[i] = p.copy(patting = true, flip = near != null && near.x > p.x)
-    }
-    return result.map { s ->
-        val partnerX = anchored[s.member.id] ?: return@map s
-        s.copy(patting = true, flip = partnerX > s.x)
-    }
-}
 
 /**
  * Cả hội ngồi quanh đống lửa trên nền đất hắt sáng; mỗi người đổ bóng dài ra xa lửa.
@@ -456,10 +414,7 @@ fun CampScene(
             val depth = rows[row] / 100f
             Seat(m, x, feetY, feetY - boxH.value / 2, w, depth, tilt = (jitter.nextFloat() - 0.5f) * 14f)
         }
-    }).map(::onGround).let { placed ->
-        // Đống lửa rộng 0.4 chiều cao khung (xem Campfire bên dưới).
-        if (burning) sitBesideToPat(placed, said.keys, fireBase, height.value * 0.2f) else placed
-    }
+    }).map(::onGround).map { if (burning && it.member.id in said) it.copy(toasting = true) else it }
     Box(modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
         Canvas(Modifier.matchParentSize().zIndex(-1000f)) {
             val fire = center + Offset(0f, fireBase.dp.toPx())
@@ -502,12 +457,11 @@ fun CampScene(
         seats.forEach { seat ->
             // Không hiện tên quanh lửa: hang đông thì tên đè nhau. Bạn có vầng sáng vàng.
             key(seat.member.id) {
-                // Người vỗ vai trượt sang ngồi sát người bạn của mình.
                 val x by animateFloatAsState(seat.x, tween(700, easing = FastOutSlowInEasing), label = "x")
                 val y by animateFloatAsState(seat.centerY, tween(700, easing = FastOutSlowInEasing), label = "y")
                 Caveman(
                     seat.member.nickname, seat.member.id, width = seat.width.dp, me = seat.member.id == meId, asleep = !burning, showName = false,
-                    patting = seat.patting, flip = seat.flip,
+                    toasting = seat.toasting, flip = seat.flip,
                     modifier = Modifier.offset(x.dp, y.dp).zIndex(seat.depth).graphicsLayer { rotationZ = seat.tilt },
                 )
             }
