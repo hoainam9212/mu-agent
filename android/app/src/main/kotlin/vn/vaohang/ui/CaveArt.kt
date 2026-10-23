@@ -343,27 +343,43 @@ private data class Seat(
 )
 
 /**
- * Người vừa vỗ vai nhích sang ngồi sát người gần nhất, bàn tay chạm đúng vai người đó (ảnh vỗ vai:
+ * Người vừa vỗ vai nhích sang ngồi sát một người bạn, bàn tay chạm đúng vai người đó (ảnh vỗ vai:
  * tay ở mép trái khung, nên ngồi bên phải bạn thì không lật, ngồi bên trái thì lật).
+ * Chỉ chọn chỗ không trùng đống lửa và không đè lên người khác; lấy chỗ gần chỗ cũ nhất.
  */
-private fun sitBesideToPat(seats: List<Seat>, patters: Set<Long>): List<Seat> {
+private fun sitBesideToPat(seats: List<Seat>, patters: Set<Long>, fireBase: Float, fireHalf: Float): List<Seat> {
     val taken = mutableSetOf<Long>()
-    return seats.map { p ->
-        if (p.member.id !in patters) return@map p
-        val friend = seats
+    val result = seats.toMutableList()
+    seats.forEachIndexed { i, p ->
+        if (p.member.id !in patters) return@forEachIndexed
+        data class Spot(val friend: Seat, val x: Float, val feetY: Float, val onRight: Boolean)
+        val spots = seats
             .filter { it.member.id != p.member.id && it.member.id !in patters && it.member.id !in taken }
-            .minByOrNull { (it.x - p.x) * (it.x - p.x) + (it.feetY - p.feetY) * (it.feetY - p.feetY) }
-            ?: return@map p.copy(patting = true)
-        taken += friend.member.id
-        val reach = friend.width * 0.3f + p.width * 0.55f
-        val onRight = p.x >= friend.x
-        val x = if (onRight) friend.x + reach else friend.x - reach
-        val feetY = friend.feetY + (p.feetY - friend.feetY) * 0.2f
-        p.copy(
-            x = x, feetY = feetY, centerY = feetY - (p.feetY - p.centerY),
-            flip = !onRight, patting = true, depth = friend.depth + 0.01f,
+            .flatMap { f ->
+                val reach = f.width * 0.3f + p.width * 0.55f
+                val feetY = f.feetY + (p.feetY - f.feetY) * 0.2f
+                listOf(Spot(f, f.x + reach, feetY, true), Spot(f, f.x - reach, feetY, false))
+            }
+            .filter { s ->
+                val onFire = kotlin.math.abs(s.x) < fireHalf + p.width * 0.35f && s.feetY in (fireBase - 70f)..(fireBase + 50f)
+                val crowded = result.any { o ->
+                    o.member.id != p.member.id && o.member.id != s.friend.member.id &&
+                        kotlin.math.abs(o.x - s.x) < (o.width + p.width) * 0.4f && kotlin.math.abs(o.feetY - s.feetY) < 30f
+                }
+                !onFire && !crowded
+            }
+        val best = spots.minByOrNull { (it.x - p.x) * (it.x - p.x) + (it.feetY - p.feetY) * (it.feetY - p.feetY) }
+        if (best == null) {
+            result[i] = p.copy(patting = true)
+            return@forEachIndexed
+        }
+        taken += best.friend.member.id
+        result[i] = p.copy(
+            x = best.x, feetY = best.feetY, centerY = best.feetY - (p.feetY - p.centerY),
+            flip = !best.onRight, patting = true, depth = best.friend.depth + 0.01f,
         )
     }
+    return result
 }
 
 /**
@@ -439,7 +455,10 @@ fun CampScene(
             val depth = rows[row] / 100f
             Seat(m, x, feetY, feetY - boxH.value / 2, w, depth, tilt = (jitter.nextFloat() - 0.5f) * 14f)
         }
-    }).map(::onGround).let { placed -> if (burning) sitBesideToPat(placed, said.keys) else placed }
+    }).map(::onGround).let { placed ->
+        // Đống lửa rộng 0.4 chiều cao khung (xem Campfire bên dưới).
+        if (burning) sitBesideToPat(placed, said.keys, fireBase, height.value * 0.2f) else placed
+    }
     Box(modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
         Canvas(Modifier.matchParentSize().zIndex(-1000f)) {
             val fire = center + Offset(0f, fireBase.dp.toPx())
