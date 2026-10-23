@@ -439,23 +439,27 @@ fun CampScene(
                     radius = gx, center = fire,
                 )
             }
-            // Bóng đổ dài ra xa đống lửa (chỉ khi lửa cháy).
+            // Bóng đổ ra xa đống lửa (chỉ khi lửa cháy): bầu dục mềm, mờ dần ra mép, không viền sắc.
             if (lit > 0.01f) {
                 seats.forEach { seat ->
                     val feet = center + Offset(seat.x.dp.toPx(), seat.feetY.dp.toPx())
                     val dir = feet - fire
                     val u = dir / dir.getDistance().coerceAtLeast(1f)
-                    val perp = Offset(-u.y, u.x)
-                    val half = seat.width.dp.toPx() * 0.28f
-                    val end = feet + u * (seat.width.dp.toPx() * 1.1f)
-                    val shadow = Path().apply {
-                        (feet + perp * half).let { moveTo(it.x, it.y) }
-                        (end + perp * (half * 0.4f)).let { lineTo(it.x, it.y) }
-                        (end - perp * (half * 0.4f)).let { lineTo(it.x, it.y) }
-                        (feet - perp * half).let { lineTo(it.x, it.y) }
-                        close()
+                    val len = seat.width.dp.toPx() * 1.2f
+                    val wid = seat.width.dp.toPx() * 0.5f
+                    val c = feet + u * (len * 0.38f)
+                    val angle = Math.toDegrees(kotlin.math.atan2(u.y, u.x).toDouble()).toFloat()
+                    rotate(angle, pivot = c) {
+                        scale(1f, wid / len, pivot = c) {
+                            drawCircle(
+                                Brush.radialGradient(
+                                    listOf(Color.Black.copy(alpha = 0.32f * lit), Color.Black.copy(alpha = 0.14f * lit), Color.Transparent),
+                                    center = c, radius = len / 2,
+                                ),
+                                radius = len / 2, center = c,
+                            )
+                        }
                     }
-                    drawPath(shadow, Brush.linearGradient(listOf(Color.Black.copy(alpha = 0.28f * lit), Color.Transparent), start = feet, end = end))
                 }
             }
         }
@@ -472,7 +476,7 @@ fun CampScene(
             }
         }
         Campfire(burning, Modifier.size(height * 0.4f).offset(y = height * 0.1f).zIndex(0f))
-        // Câu vỗ vai hiện thành bong bóng ngay trên đầu người nói.
+        // Câu "Zô" hiện thành bong bóng ngay trên đầu người nói.
         seats.forEach { seat ->
             val text = said[seat.member.id] ?: return@forEach
             val x = seat.x
