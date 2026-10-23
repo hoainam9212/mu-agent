@@ -76,6 +76,40 @@ private const val GLOW_Y = 0.755f
 private val FloorLit = Color(0xFF34261C)
 private val FloorDark = Color(0xFF181D22)
 
+private const val CAVE_W = 1116f
+private const val CAVE_H = 2000f
+
+// Vùng nền đất ngồi/nằm được trên ảnh hang (tỉ lệ x, y theo ảnh), đo bằng lưới trên ảnh;
+// ngoài vùng này là vách hang và măng đá. Đáy kéo quá 1 vì phần dưới ảnh được tô tiếp màu nền đất.
+private val FLOOR = floatArrayOf(
+    0.47f, 0.58f, 0.76f, 0.58f, 0.76f, 0.66f, 0.90f, 0.72f, 0.80f, 0.76f, 0.76f, 0.88f,
+    0.80f, 1.3f, 0.30f, 1.3f, 0.28f, 0.86f, 0.10f, 0.76f, 0.13f, 0.69f, 0.45f, 0.67f,
+)
+
+private fun inPolygon(x: Float, y: Float, p: FloatArray): Boolean {
+    var inside = false
+    var j = p.size - 2
+    for (i in p.indices step 2) {
+        val (xi, yi, xj, yj) = listOf(p[i], p[i + 1], p[j], p[j + 1])
+        if ((yi > y) != (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside
+        j = i
+    }
+    return inside
+}
+
+/**
+ * Hàm kiểm tra một điểm có nằm trên nền đất của ảnh hang không. Điểm tính bằng dp, lệch so với gốc đống lửa
+ * (đặt ở giữa ngang, độ cao [fireY] của khung [screenW] x [screenH]) – cùng phép kéo ảnh với [CaveBackdrop].
+ */
+fun caveFloorTest(screenW: Float, screenH: Float, fireY: Float): (Float, Float) -> Boolean {
+    val s = maxOf(screenW / CAVE_W, screenH / CAVE_H)
+    val dw = CAVE_W * s
+    val dh = CAVE_H * s
+    val dx = (screenW / 2 - GLOW_X * dw).coerceIn(screenW - dw, 0f)
+    val dy = minOf(fireY * screenH - GLOW_Y * dh, 0f)
+    return { ox, oy -> inPolygon((screenW / 2 + ox - dx) / dw, (fireY * screenH + oy - dy) / dh, FLOOR) }
+}
+
 /**
  * Nền hang đất nặn: ảnh hang sáng lửa và ảnh hang tối, chuyển dần theo lửa.
  * Ảnh được kéo sao cho vệt sáng trên nền đất nằm ở [fireY] (tỉ lệ chiều cao màn hình);
@@ -218,6 +252,15 @@ private val CheerSprites = intArrayOf(
 
 fun cavemanVariant(seed: Long): Int = Math.floorMod(seed, SitSprites.size.toLong()).toInt()
 
+// Kiểu 0, 1, 3, 5 ngủ nằm co trên đất (ảnh nằm ngang); kiểu 2, 4 ngủ gật ngồi.
+private val LyingWhenAsleep = setOf(0, 1, 3, 5)
+
+private fun lying(seed: Long, asleep: Boolean) = asleep && cavemanVariant(seed) in LyingWhenAsleep
+
+/** Kích thước khung vẽ một nhân vật (không kể tên), để đặt chân đúng chỗ trên nền. */
+fun cavemanBox(seed: Long, width: Dp, asleep: Boolean): Pair<Dp, Dp> =
+    if (lying(seed, asleep)) (width * 1.5f) to (width * 0.9f) else (width + 16.dp) to (width * 1.3f)
+
 /**
  * Một anh em trong hang: người tối cổ đất nặn mặc áo đỏ MU, thở nhẹ.
  * [asleep] khi lửa tắt (nằm ngủ); [cheer] nhảy mừng; [me] có vầng sáng vàng dưới chân.
@@ -239,7 +282,7 @@ fun Caveman(
         asleep -> SleepSprites[v]
         else -> SitSprites[v]
     }
-    val height = width * 1.3f
+    val (boxW, boxH) = cavemanBox(seed, width, asleep)
     val breathe by rememberInfiniteTransition(label = "breathe").animateFloat(
         0f, 1f,
         infiniteRepeatable(
@@ -248,8 +291,8 @@ fun Caveman(
         ),
         label = "b",
     )
-    Column(modifier.width(width + 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(width + 16.dp, height), contentAlignment = Alignment.BottomCenter) {
+    Column(modifier.width(boxW), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(boxW, boxH), contentAlignment = Alignment.BottomCenter) {
             if (me) {
                 Canvas(Modifier.matchParentSize()) {
                     val c = Offset(size.width / 2, size.height * 0.94f)
@@ -281,6 +324,10 @@ fun Caveman(
 
 private val Dirt = Color(0xFF2A1C12)
 
+private data class Seat(
+    val member: Member, val x: Float, val feetY: Float, val centerY: Float, val width: Float, val depth: Float, val tilt: Float = 0f,
+)
+
 /**
  * Cả hội ngồi quanh đống lửa trên nền đất hắt sáng; mỗi người đổ bóng dài ra xa lửa.
  * Người phía sau lửa vẽ trước, người phía trước vẽ đè lên.
@@ -293,6 +340,7 @@ fun CampScene(
     modifier: Modifier = Modifier,
     height: Dp = 330.dp,
     said: Map<Long, String> = emptyMap(),
+    onFloor: ((Float, Float) -> Boolean)? = null,
 ) {
     val lit by animateFloatAsState(if (burning) 1f else 0f, tween(2500), label = "ground")
     val n = people.size
@@ -300,22 +348,62 @@ fun CampScene(
     val start = -PI / 2 + if (n % 2 == 0 && n > 0) PI / n else 0.0
     // Đông người thì nhân vật nhỏ lại và vòng ngồi rộng ra (tối đa 10 người một hội).
     val avatar = when {
-        n <= 5 -> 84.dp
-        n <= 7 -> 70.dp
-        else -> 58.dp
+        n <= 5 -> 84f
+        n <= 7 -> 70f
+        else -> 58f
     }
-    val rx = if (n <= 6) 124.0 else 134.0
-    val ry = height.value * (if (n <= 6) 0.27 else 0.31)
-    val seats = people.mapIndexed { i, m ->
-        val angle = start + 2 * PI * i / n
-        Triple(m, (cos(angle) * rx).toFloat(), (sin(angle) * ry + 6).toFloat())
+    // Vòng ngồi dẹt, tâm là gốc đống lửa, để ai cũng ngồi trên nền đất (không leo lên vách hang).
+    val rx = if (n <= 6) 126f else 140f
+    val ry = if (n <= 6) 58f else 66f
+    val fireBase = height.value * 0.19f // gốc lửa, tính từ tâm khung
+    // Kéo chỗ ngồi về phía đống lửa cho tới khi cả người (chân, hai bên) nằm trên nền đất, không trên vách hang.
+    fun onGround(seat: Seat): Seat {
+        val test = onFloor ?: return seat
+        val dyCenter = seat.centerY - seat.feetY
+        var t = 1f
+        while (t > 0.35f) {
+            val x = seat.x * t
+            val fy = fireBase + (seat.feetY - fireBase) * t
+            val half = seat.width * 0.45f
+            if (test(x, fy - fireBase) && test(x - half, fy - fireBase) && test(x + half, fy - fireBase)) {
+                return seat.copy(x = x, feetY = fy, centerY = fy + dyCenter)
+            }
+            t -= 0.05f
+        }
+        return seat
     }
+    val seats = (if (burning) {
+        people.mapIndexed { i, m ->
+            val angle = start + 2 * PI * i / n
+            val depth = sin(angle).toFloat() // -1: phía sau lửa, 1: phía trước
+            val w = avatar * (0.82f + 0.18f * (depth + 1) / 2) // người phía sau nhỏ hơn
+            val (_, boxH) = cavemanBox(m.id, w.dp, false)
+            val feetY = fireBase + depth * ry
+            Seat(m, (cos(angle) * rx).toFloat(), feetY, feetY - boxH.value / 2, w, depth)
+        }
+    } else {
+        // Lửa tắt: lăn ra ngủ cạnh nhau thành hàng quanh đống than, lệch và nghiêng một chút cho tự nhiên.
+        val w = if (n <= 6) 64f else 54f
+        val perRow = 3
+        val rows = listOf(52f, -44f, 100f) // hàng trước, hàng sau lửa, hàng trước nữa (so với gốc lửa)
+        people.mapIndexed { i, m ->
+            val row = minOf(i / perRow, rows.lastIndex)
+            val inRow = people.size.let { total -> minOf(perRow, total - row * perRow).coerceAtLeast(1) }
+            val col = i - row * perRow
+            val (boxW, boxH) = cavemanBox(m.id, w.dp, true)
+            val jitter = Random(m.id)
+            val x = (col - (inRow - 1) / 2f) * (boxW.value * 0.92f) + (jitter.nextFloat() - 0.5f) * 18f
+            val feetY = fireBase + rows[row] + (jitter.nextFloat() - 0.5f) * 10f
+            val depth = rows[row] / 100f
+            Seat(m, x, feetY, feetY - boxH.value / 2, w, depth, tilt = (jitter.nextFloat() - 0.5f) * 14f)
+        }
+    }).map(::onGround)
     Box(modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
         Canvas(Modifier.matchParentSize().zIndex(-1000f)) {
-            val fire = center + Offset(0f, height.toPx() * 0.19f)
+            val fire = center + Offset(0f, fireBase.dp.toPx())
             // Nền đất: vùng sáng cam quanh lửa (lửa tắt thì chỉ còn đất tối).
-            val gx = (rx.toFloat() + 85f).dp.toPx()
-            val gy = (ry.toFloat() + 45f).dp.toPx()
+            val gx = (rx + 85f).dp.toPx()
+            val gy = (ry + 45f).dp.toPx()
             scale(1f, gy / gx, pivot = fire) {
                 drawCircle(
                     Brush.radialGradient(
@@ -329,45 +417,41 @@ fun CampScene(
                     radius = gx, center = fire,
                 )
             }
-            // Bóng tiếp đất ngay dưới mỗi người.
-            seats.forEach { (_, x, y) ->
-                val feet = center + Offset(x.dp.toPx(), (y + avatar.value * 0.6f).dp.toPx())
-                scale(1f, 0.3f, pivot = feet) { drawCircle(Color.Black.copy(alpha = 0.4f), avatar.toPx() * 0.5f, feet) }
-            }
-            // Bóng đổ dài ra xa đống lửa.
+            // Bóng đổ dài ra xa đống lửa (chỉ khi lửa cháy).
             if (lit > 0.01f) {
-                seats.forEach { (_, x, y) ->
-                    val feet = center + Offset(x.dp.toPx(), (y + avatar.value * 0.6f).dp.toPx())
+                seats.forEach { seat ->
+                    val feet = center + Offset(seat.x.dp.toPx(), seat.feetY.dp.toPx())
                     val dir = feet - fire
                     val u = dir / dir.getDistance().coerceAtLeast(1f)
                     val perp = Offset(-u.y, u.x)
-                    val half = avatar.toPx() * 0.28f
-                    val end = feet + u * (avatar.toPx() * 1.5f)
+                    val half = seat.width.dp.toPx() * 0.28f
+                    val end = feet + u * (seat.width.dp.toPx() * 1.5f)
                     val shadow = Path().apply {
                         (feet + perp * half).let { moveTo(it.x, it.y) }
-                        (end + perp * (half * 0.5f)).let { lineTo(it.x, it.y) }
-                        (end - perp * (half * 0.5f)).let { lineTo(it.x, it.y) }
+                        (end + perp * (half * 0.4f)).let { lineTo(it.x, it.y) }
+                        (end - perp * (half * 0.4f)).let { lineTo(it.x, it.y) }
                         (feet - perp * half).let { lineTo(it.x, it.y) }
                         close()
                     }
-                    drawPath(shadow, Brush.linearGradient(listOf(Color.Black.copy(alpha = 0.55f * lit), Color.Transparent), start = feet, end = end))
+                    drawPath(shadow, Brush.linearGradient(listOf(Color.Black.copy(alpha = 0.45f * lit), Color.Transparent), start = feet, end = end))
                 }
             }
         }
-        seats.forEach { (m, x, y) ->
+        seats.forEach { seat ->
             // Không hiện tên quanh lửa: hang đông thì tên đè nhau. Bạn có vầng sáng vàng.
             Caveman(
-                m.nickname, m.id, width = avatar, me = m.id == meId, asleep = !burning, showName = false,
-                modifier = Modifier.offset(x.dp, y.dp).zIndex(y),
+                seat.member.nickname, seat.member.id, width = seat.width.dp, me = seat.member.id == meId, asleep = !burning, showName = false,
+                modifier = Modifier.offset(seat.x.dp, seat.centerY.dp).zIndex(seat.depth).graphicsLayer { rotationZ = seat.tilt },
             )
         }
-        Campfire(burning, Modifier.size(height * 0.4f).offset(y = height * 0.07f).zIndex(0f))
+        Campfire(burning, Modifier.size(height * 0.4f).offset(y = height * 0.1f).zIndex(0f))
         // Câu vỗ vai hiện thành bong bóng ngay trên đầu người nói.
-        seats.forEach { (m, x, y) ->
-            val text = said[m.id] ?: return@forEach
+        seats.forEach { seat ->
+            val text = said[seat.member.id] ?: return@forEach
+            val x = seat.x
             val bx = x.coerceIn(-100f, 100f)
             // Người ngồi phía sau lửa: bong bóng trên đầu; người phía trước: bong bóng dưới chân, để không che ai.
-            val above = y < 20f
+            val above = seat.depth < 0.3f
             val tail: @Composable () -> Unit = {
                 Canvas(Modifier.offset(x = (x - bx).dp).size(14.dp, 7.dp)) {
                     val p = if (above) Path().apply { moveTo(0f, 0f); lineTo(size.width, 0f); lineTo(size.width / 2, size.height); close() }
@@ -375,7 +459,8 @@ fun CampScene(
                     drawPath(p, Ink.copy(alpha = 0.95f))
                 }
             }
-            val by = if (above) y - avatar.value * 0.62f - 30f else y + avatar.value * 0.62f + 30f
+            val headTop = seat.feetY - seat.width * 1.3f
+            val by = if (above) headTop - 26f else seat.feetY + 26f
             Column(Modifier.offset(bx.dp, by.dp).zIndex(2000f), horizontalAlignment = Alignment.CenterHorizontally) {
                 if (!above) tail()
                 Text(

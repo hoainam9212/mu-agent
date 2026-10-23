@@ -188,12 +188,12 @@ private fun ClayButton(
                 )
             }
             .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
-            .padding(horizontal = 22.dp, vertical = 13.dp),
+            .padding(horizontal = 16.dp, vertical = 13.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text, color = if (enabled) textColor else Mute, fontFamily = DisplayFont, fontWeight = FontWeight.ExtraBold,
-            fontSize = 18.sp, maxLines = 1, modifier = Modifier.offset(y = sink),
+            fontSize = 17.sp, maxLines = 1, modifier = Modifier.offset(y = sink),
         )
     }
 }
@@ -614,9 +614,10 @@ fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, actions: UiAction
         BoxWithConstraints(Modifier.fillMaxSize()) {
             // Sân khấu: đống lửa đặt đúng vệt sáng trên nền hang, cả hội ngồi quanh.
             val fireBase = maxHeight * FIRE_Y
+            val floor = remember(maxWidth, maxHeight) { caveFloorTest(maxWidth.value, maxHeight.value, FIRE_Y) }
             CampScene(
                 cave.inside, meId, burning, said = if (burning) recentSayings(cave) else emptyMap(),
-                height = SceneHeight,
+                height = SceneHeight, onFloor = floor,
                 modifier = Modifier.align(Alignment.TopCenter)
                     .offset(y = fireBase - SceneHeight / 2 - SceneHeight * 0.19f),
             )
@@ -642,12 +643,12 @@ fun CaveScreen(cave: CaveView, groupName: String?, meId: Long, actions: UiAction
                         FireButton("👋  Vỗ vai", onClick = { choosing = true }, pulse = cave.pats.isEmpty(), modifier = Modifier.fillMaxWidth())
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             GhostButton("📣  Rủ anh em", onClick = { actions.invite(cave.id) }, modifier = Modifier.weight(1f))
-                            GhostButton("🚪  Ra hang", onClick = { actions.leaveCave(cave.id) }, color = Mute, modifier = Modifier.weight(1f))
+                            GhostButton("🚪  Ra ngoài thôi!", onClick = { actions.leaveCave(cave.id) }, color = Mute, modifier = Modifier.weight(1f))
                         }
                     }
                     else -> {
                         FireOutPanel()
-                        GhostButton("🚪  Ra hang", onClick = { actions.leaveCave(cave.id) }, color = Mute, modifier = Modifier.fillMaxWidth())
+                        GhostButton("🚪  Ra ngoài thôi!", onClick = { actions.leaveCave(cave.id) }, color = Mute, modifier = Modifier.fillMaxWidth())
                     }
                 }
             }
