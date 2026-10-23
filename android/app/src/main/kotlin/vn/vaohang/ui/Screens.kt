@@ -79,6 +79,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import vn.vaohang.CaveView
@@ -159,6 +160,7 @@ private fun ClayButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     pulse: Boolean = false,
+    fontSize: TextUnit = 17.sp,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -182,9 +184,10 @@ private fun ClayButton(
                     Brush.verticalGradient(listOf(lerp(face, Color.White, 0.22f), face, lerp(face, Color.Black, 0.12f)), startY = s, endY = s + size.height),
                     topLeft = Offset(0f, s), size = size, cornerRadius = r,
                 )
+                // Vệt bóng mảnh trên mặt đất nặn.
                 drawRoundRect(
-                    Color.White.copy(alpha = 0.16f), topLeft = Offset(size.width * 0.1f, s + size.height * 0.1f),
-                    size = Size(size.width * 0.8f, size.height * 0.26f), cornerRadius = CornerRadius(size.height * 0.13f),
+                    Color.White.copy(alpha = 0.09f), topLeft = Offset(size.width * 0.14f, s + size.height * 0.1f),
+                    size = Size(size.width * 0.72f, size.height * 0.16f), cornerRadius = CornerRadius(size.height * 0.08f),
                 )
             }
             .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
@@ -193,7 +196,7 @@ private fun ClayButton(
     ) {
         Text(
             text, color = if (enabled) textColor else Mute, fontFamily = DisplayFont, fontWeight = FontWeight.ExtraBold,
-            fontSize = 17.sp, maxLines = 1, modifier = Modifier.offset(y = sink),
+            fontSize = fontSize, maxLines = 1, modifier = Modifier.offset(y = sink),
         )
     }
 }
@@ -206,7 +209,7 @@ private fun FireButton(text: String, onClick: () -> Unit, modifier: Modifier = M
 /** Nút phụ: đất nặn nâu đá. */
 @Composable
 private fun GhostButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, color: Color = Gold) =
-    ClayButton(text, onClick, ClayStone, color, modifier)
+    ClayButton(text, onClick, ClayStone, color, modifier, fontSize = 15.sp)
 
 private val ClayStone = Color(0xFF5B4535)
 
