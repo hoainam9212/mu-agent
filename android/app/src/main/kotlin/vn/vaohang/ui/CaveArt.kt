@@ -343,43 +343,36 @@ private data class Seat(
 )
 
 /**
- * Người vừa vỗ vai nhích sang ngồi sát một người bạn, bàn tay chạm đúng vai người đó (ảnh vỗ vai:
- * tay ở mép trái khung, nên ngồi bên phải bạn thì không lật, ngồi bên trái thì lật).
- * Chỉ chọn chỗ không trùng đống lửa và không đè lên người khác; lấy chỗ gần chỗ cũ nhất.
+ * Người vừa vỗ vai nhích dọc vòng ngồi về phía người bạn gần nhất, tới khi bàn tay chạm vai người đó
+ * (ảnh vỗ vai: tay ở mép trái khung, nên ngồi bên phải bạn thì không lật, ngồi bên trái thì lật).
+ * Không đi quá 1,5 lần bề ngang người, không ngồi lên đống lửa, không ra ngoài màn hình; không được thì ngồi yên, vẫn với tay.
  */
 private fun sitBesideToPat(seats: List<Seat>, patters: Set<Long>, fireBase: Float, fireHalf: Float): List<Seat> {
     val taken = mutableSetOf<Long>()
-    val result = seats.toMutableList()
-    seats.forEachIndexed { i, p ->
-        if (p.member.id !in patters) return@forEachIndexed
-        data class Spot(val friend: Seat, val x: Float, val feetY: Float, val onRight: Boolean)
-        val spots = seats
+    return seats.map { p ->
+        if (p.member.id !in patters) return@map p
+        val friends = seats
             .filter { it.member.id != p.member.id && it.member.id !in patters && it.member.id !in taken }
-            .flatMap { f ->
-                val reach = f.width * 0.3f + p.width * 0.55f
-                val feetY = f.feetY + (p.feetY - f.feetY) * 0.2f
-                listOf(Spot(f, f.x + reach, feetY, true), Spot(f, f.x - reach, feetY, false))
+            .sortedBy { (it.x - p.x) * (it.x - p.x) + (it.feetY - p.feetY) * (it.feetY - p.feetY) }
+        for (f in friends.take(2)) {
+            val reach = f.width * 0.3f + p.width * 0.55f
+            val onRight = p.x >= f.x
+            val x = if (onRight) f.x + reach else f.x - reach
+            val feetY = f.feetY + (p.feetY - f.feetY) * 0.3f
+            val travel = kotlin.math.hypot(x - p.x, feetY - p.feetY)
+            val onFire = kotlin.math.abs(x) < fireHalf + p.width * 0.35f && feetY in (fireBase - 70f)..(fireBase + 50f)
+            if (travel <= p.width * 1.5f && !onFire && kotlin.math.abs(x) <= 150f) {
+                taken += f.member.id
+                return@map p.copy(
+                    x = x, feetY = feetY, centerY = feetY - (p.feetY - p.centerY),
+                    flip = !onRight, patting = true, depth = f.depth + 0.01f,
+                )
             }
-            .filter { s ->
-                val onFire = kotlin.math.abs(s.x) < fireHalf + p.width * 0.35f && s.feetY in (fireBase - 70f)..(fireBase + 50f)
-                val crowded = result.any { o ->
-                    o.member.id != p.member.id && o.member.id != s.friend.member.id &&
-                        kotlin.math.abs(o.x - s.x) < (o.width + p.width) * 0.4f && kotlin.math.abs(o.feetY - s.feetY) < 30f
-                }
-                !onFire && !crowded
-            }
-        val best = spots.minByOrNull { (it.x - p.x) * (it.x - p.x) + (it.feetY - p.feetY) * (it.feetY - p.feetY) }
-        if (best == null) {
-            result[i] = p.copy(patting = true)
-            return@forEachIndexed
         }
-        taken += best.friend.member.id
-        result[i] = p.copy(
-            x = best.x, feetY = best.feetY, centerY = best.feetY - (p.feetY - p.centerY),
-            flip = !best.onRight, patting = true, depth = best.friend.depth + 0.01f,
-        )
+        // Không nhích được: ngồi yên, với tay về phía người gần nhất.
+        val near = friends.firstOrNull()
+        p.copy(patting = true, flip = near != null && near.x > p.x)
     }
-    return result
 }
 
 /**
