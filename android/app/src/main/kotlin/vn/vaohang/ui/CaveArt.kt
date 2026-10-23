@@ -439,7 +439,7 @@ fun CampScene(
                     val u = dir / dir.getDistance().coerceAtLeast(1f)
                     val perp = Offset(-u.y, u.x)
                     val half = seat.width.dp.toPx() * 0.28f
-                    val end = feet + u * (seat.width.dp.toPx() * 1.5f)
+                    val end = feet + u * (seat.width.dp.toPx() * 1.1f)
                     val shadow = Path().apply {
                         (feet + perp * half).let { moveTo(it.x, it.y) }
                         (end + perp * (half * 0.4f)).let { lineTo(it.x, it.y) }
@@ -447,7 +447,7 @@ fun CampScene(
                         (feet - perp * half).let { lineTo(it.x, it.y) }
                         close()
                     }
-                    drawPath(shadow, Brush.linearGradient(listOf(Color.Black.copy(alpha = 0.45f * lit), Color.Transparent), start = feet, end = end))
+                    drawPath(shadow, Brush.linearGradient(listOf(Color.Black.copy(alpha = 0.28f * lit), Color.Transparent), start = feet, end = end))
                 }
             }
         }

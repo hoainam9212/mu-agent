@@ -698,7 +698,7 @@ fun CelebrateScreen(onDone: () -> Unit) {
             Row {
                 listOf(-21L, -22L, -23L, -24L).forEachIndexed { i, seed ->
                     val jump = abs(sin((t + i * 0.27f) * PI)).toFloat() * 30f
-                    Caveman("MU", seed, width = 64.dp, cheer = true, showName = false, modifier = Modifier.offset(y = (-jump).dp))
+                    Caveman("MU", seed, width = 72.dp, cheer = true, showName = false, modifier = Modifier.offset(y = (-jump).dp))
                 }
             }
             Spacer(Modifier.height(28.dp))
