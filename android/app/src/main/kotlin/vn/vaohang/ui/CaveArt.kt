@@ -454,22 +454,33 @@ fun CampScene(
                     radius = gx, center = fire,
                 )
             }
-            // Bóng đổ ra xa đống lửa (chỉ khi lửa cháy): bầu dục mềm, mờ dần ra mép, không viền sắc.
-            if (lit > 0.01f) {
-                seats.forEach { seat ->
-                    val feet = center + Offset(seat.x.dp.toPx(), seat.feetY.dp.toPx())
+            seats.forEach { seat ->
+                val feet = center + Offset(seat.x.dp.toPx(), seat.feetY.dp.toPx())
+                val w = seat.width.dp.toPx() * if (burning) 1f else 1.7f // người nằm thì bóng dài theo người
+                // Bóng sát chỗ ngồi/nằm: người "chạm đất", không lơ lửng. Lửa tắt vẫn còn bóng mờ.
+                scale(1f, 0.26f, pivot = feet) {
+                    drawCircle(
+                        Brush.radialGradient(
+                            listOf(Color.Black.copy(alpha = 0.3f + 0.25f * lit), Color.Black.copy(alpha = 0.15f + 0.12f * lit), Color.Transparent),
+                            center = feet, radius = w * 0.55f,
+                        ),
+                        radius = w * 0.55f, center = feet,
+                    )
+                }
+                // Bóng đổ ra xa đống lửa (chỉ khi lửa cháy): bắt đầu đậm ngay dưới chân, nhạt dần ra xa.
+                if (lit > 0.01f) {
                     val dir = feet - fire
                     val u = dir / dir.getDistance().coerceAtLeast(1f)
-                    val len = seat.width.dp.toPx() * 1.2f
-                    val wid = seat.width.dp.toPx() * 0.5f
-                    val c = feet + u * (len * 0.38f)
+                    val len = seat.width.dp.toPx() * 1.1f
+                    val wid = seat.width.dp.toPx() * 0.55f
+                    val c = feet + u * (len * 0.5f)
                     val angle = Math.toDegrees(kotlin.math.atan2(u.y, u.x).toDouble()).toFloat()
                     rotate(angle, pivot = c) {
                         scale(1f, wid / len, pivot = c) {
                             drawCircle(
                                 Brush.radialGradient(
-                                    listOf(Color.Black.copy(alpha = 0.32f * lit), Color.Black.copy(alpha = 0.14f * lit), Color.Transparent),
-                                    center = c, radius = len / 2,
+                                    listOf(Color.Black.copy(alpha = 0.34f * lit), Color.Black.copy(alpha = 0.16f * lit), Color.Transparent),
+                                    center = c - Offset(len * 0.5f, 0f), radius = len,
                                 ),
                                 radius = len / 2, center = c,
                             )
