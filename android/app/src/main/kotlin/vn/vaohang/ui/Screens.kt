@@ -19,10 +19,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -233,7 +235,7 @@ private fun ConsentRow(title: String, detail: String, checked: Boolean, onChange
 @Composable
 private fun RuleBadge(icon: String, text: String, modifier: Modifier = Modifier) {
     Column(
-        modifier.clip(RoundedCornerShape(18.dp)).background(Rock).padding(vertical = 12.dp, horizontal = 6.dp),
+        modifier.fillMaxHeight().clip(RoundedCornerShape(18.dp)).background(Rock).padding(vertical = 12.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(icon, fontSize = 26.sp)
@@ -264,7 +266,7 @@ fun OnboardingScreen(busy: Boolean, onDone: (String, Boolean, Boolean) -> Unit) 
                 singleLine = true, colors = caveFieldColors(), shape = RoundedCornerShape(18.dp),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 RuleBadge("🤝", "Chỉ anh em", Modifier.weight(1f))
                 RuleBadge("🤐", "Không chat", Modifier.weight(1f))
                 RuleBadge("📵", "Không chụp", Modifier.weight(1f))
