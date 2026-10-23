@@ -115,10 +115,3 @@ jobs:
           name: vaohang-ui-preview
           path: android/app/src/test/snapshots/images/
           if-no-files-found: error
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Ghép ảnh xem nhanh
-        run: |
-          pip install -q pillow
-          python ../.github/scripts/preview_sheet.py app/src/test/snapshots/images

@@ -1,0 +1,37 @@
+name: UI preview
+
+# Chạy tay: chụp lại các màn hình và lưu ảnh nhỏ vào docs/ui-preview trên chính nhánh đang chạy.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  record:
+    name: Chụp và lưu ảnh giao diện
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Chụp màn hình bằng Paparazzi
+        working-directory: android
+        run: ./gradlew :app:recordPaparazziDebug --stacktrace
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Thu nhỏ ảnh
+        run: |
+          pip install -q pillow
+          python .github/scripts/preview_sheet.py android/app/src/test/snapshots/images docs/ui-preview
+      - name: Lưu ảnh vào nhánh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/ui-preview
+          git commit -m "UI preview screenshots [skip ci]" || { echo "Ảnh không đổi"; exit 0; }
+          git push
